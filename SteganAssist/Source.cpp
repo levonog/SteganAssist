@@ -1,6 +1,9 @@
 #include<iostream>
+#include"Jpeg.h"
 
 int main()
 {
-	int a = 0;
+	Jpeg jpeg({});
+
+
 }
