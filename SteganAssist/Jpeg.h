@@ -57,7 +57,9 @@ private:
 		EOI = 0xD9, // End Of Image
 	};
 	int process_start_of_image(const std::vector<char>& image_content, int index);
-	int process_start_of_frame(const std::vector<char>& image_content, int index);
+	int process_start_of_frame_simple(const std::vector<char>& image_content, int index);
+	int process_start_of_frame_extended(const std::vector<char>& image_content, int index);
+	int process_start_of_frame_progressive(const std::vector<char>& image_content, int index);
 	int process_huffman_table(const std::vector<char>& image_content, int index);
 	int process_quantization_table(const std::vector<char>& image_content, int index);
 	int process_restart_interval(const std::vector<char>& image_content, int index);
@@ -67,9 +69,13 @@ private:
 	int process_comment(const std::vector<char>& image_content, int index);
 	int process_end_of_image(const std::vector<char>& image_content, int index);
 	HuffmanTree* tree;
+	std::string comment;
+	std::vector<std::vector<std::vector<short>>> quantization_tables;
 public:
 	Jpeg(const std::vector<char>& image_content)
 	{
+		quantization_tables.resize(0xF);
+
 		for (int i = 0; i < image_content.size() - 1; i++)
 		{
 			if (image_content[i] == 0xFF)
@@ -80,9 +86,11 @@ public:
 				case SOI:
 					i += process_start_of_image(image_content, i + 2);
 				case SOF0:
+					i += process_start_of_frame_simple(image_content, i + 2);
 				case SOF1:
+					i += process_start_of_frame_extended(image_content, i + 2);
 				case SOF2:
-					i += process_start_of_frame(image_content, i + 2);
+					i += process_start_of_frame_progressive(image_content, i + 2);
 				case DHT:
 					i += process_huffman_table(image_content, i + 2);
 				case DQT:
