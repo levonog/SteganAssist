@@ -1,4 +1,5 @@
 #pragma once
+#include<map>
 #include<vector>
 #include<algorithm>
 
@@ -30,10 +31,10 @@ class Jpeg
 
 	struct Frame
 	{
-		short _identifier;
-		short _horizontal_thinning;
-		short _vertical_thinning;
-		short _identifier_of_quantization_table;
+		int _id;
+		int _horizontal_thinning;
+		int _vertical_thinning;
+		int _id_of_quantization_table;
 	};
 
 private:
@@ -66,6 +67,7 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
+	bool check_for_image_correctness(const std::vector<char>& image_content_);
 	int process_start_of_image(const std::vector<char>& image_content_, int index_);
 	int process_start_of_frame_simple(const std::vector<char>& image_content_, int index_);
 	int process_start_of_frame_extended(const std::vector<char>& image_content_, int index_);
@@ -78,12 +80,12 @@ private:
 	int process_application_specific(const std::vector<char>& image_content_, int index_);
 	int process_comment(const std::vector<char>& image_content_, int index_);
 	int process_end_of_image(const std::vector<char>& image_content_, int index_);
-	HuffmanTree* _tree;
+	std::map<int, HuffmanTree> _huffman_trees;
 	std::string _comment;
-	std::vector<std::vector<std::vector<short>>> _quantization_tables;
+	std::vector<std::vector<std::vector<int>>> _quantization_tables;
 	std::vector<Frame> _frames;
-	short _max_horizontal_thinning;
-	short _max_vertical_thinning;
+	int _max_horizontal_thinning;
+	int _max_vertical_thinning;
 
 
 public:

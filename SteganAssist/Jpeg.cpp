@@ -60,6 +60,25 @@ void Jpeg::HuffmanTree::Reset()
 	_state = _root;
 }
 
+
+
+bool Jpeg::check_for_image_correctness(const std::vector<char>& image_content_)
+{
+	if (image_content_.size() < 4) // TODO: understand, how much can be minimal size of picture
+	{
+		throw std::exception("Too small size of picture");
+	}
+	if (image_content_[0] * 0x100 + image_content_[1] != 0xFFD8)
+	{
+		throw std::exception("This is not JPEG file, start bytes are note matching");
+	}
+	if (image_content_[image_content_.size() - 2] * 0x100 + image_content_[image_content_.size() - 1] != 0xFFD9)
+	{
+		throw std::exception("This is not JPEG file, end bytes are note matching");
+	}
+	// TODO: add another checks
+}
+
 int Jpeg::process_start_of_image(const std::vector<char>& image_content__, int index_)
 {
 	return 0;
@@ -82,10 +101,10 @@ int Jpeg::process_start_of_frame_simple(const std::vector<char>& image_content_,
 	for (int i = 0; i < components_count; i++)
 	{
 		Frame frame;
-		frame._identifier = image_content_[index_];
+		frame._id = image_content_[index_];
 		frame._horizontal_thinning = image_content_[index_ + 1] & 0xF0;
 		frame._vertical_thinning = image_content_[index_ + 1] & 0x0F;
-		frame._identifier_of_quantization_table = image_content_[index_ + 2];
+		frame._id_of_quantization_table = image_content_[index_ + 2];
 		_frames.push_back(frame);
 
 		_max_horizontal_thinning = std::max(frame._horizontal_thinning, _max_horizontal_thinning);
@@ -110,6 +129,40 @@ int Jpeg::process_huffman_table(const std::vector<char>& image_content_, int ind
 {
 	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 
+	int coef_type = image_content_[index_ + 2] & 0xF0;
+	int table_id = image_content_[index_ + 2] & 0x0F;
+
+	index_ += 3;
+
+	std::vector<int> huffman_codes_lenght(0x100);
+	int number_of_lengths = 0;
+	for (int i = 0; i < huffman_codes_lenght.size(); i++)
+	{
+		huffman_codes_lenght[i] = image_content_[index_ + i];
+		number_of_lengths += huffman_codes_lenght[i];
+	}
+
+	index_ += huffman_codes_lenght.size();
+
+	std::vector<int> huffman_codes_values(number_of_lengths);
+	for (int i = 0; i < huffman_codes_values.size(); i++)
+	{
+		huffman_codes_values[i] = image_content_[index_ + i];
+	}
+
+	index_ += huffman_codes_values.size();
+
+	HuffmanTree& tree = _huffman_trees[table_id];
+
+	for (int i = 0, count = 0; i < huffman_codes_lenght.size(); i++)
+	{
+		while (huffman_codes_lenght[i])
+		{
+			tree.AddElement(i, huffman_codes_values[count++]);
+			huffman_codes_lenght[i]--;
+		}
+	}
+	return size_of_table;
 }
 
 int Jpeg::process_quantization_table(const std::vector<char>& image_content_, int index_)
@@ -117,10 +170,10 @@ int Jpeg::process_quantization_table(const std::vector<char>& image_content_, in
 	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 
 	int value_in_2_bytes = image_content_[index_ + 2] & 0xF0;
-	int table_identifier = image_content_[index_ + 2] & 0x0F;
+	int table_id = image_content_[index_ + 2] & 0x0F;
 	int size_of_matrix = sqrt(size_of_table - 3);
 
-	_quantization_tables[table_identifier].resize(size_of_matrix, std::vector<short>(size_of_matrix));
+	_quantization_tables[table_id].resize(size_of_matrix, std::vector<int>(size_of_matrix));
 
 	std::vector<std::pair<int, int>> indices(size_of_table - 3);
 	
@@ -148,11 +201,11 @@ int Jpeg::process_quantization_table(const std::vector<char>& image_content_, in
 	for (int i = 3, t = 0; i < size_of_table; i += 1 + value_in_2_bytes, t++)
 	{
 		std::pair<int, int> next_index_ = indices[t];
-		_quantization_tables[table_identifier][next_index_.first][next_index_.second] = image_content_[index_ + i];
+		_quantization_tables[table_id][next_index_.first][next_index_.second] = image_content_[index_ + i];
 		if (value_in_2_bytes)
 		{
-			_quantization_tables[table_identifier][next_index_.first][next_index_.second] *= 0x100;
-			_quantization_tables[table_identifier][next_index_.first][next_index_.second] += image_content_[index_ + i + 1];
+			_quantization_tables[table_id][next_index_.first][next_index_.second] *= 0x100;
+			_quantization_tables[table_id][next_index_.first][next_index_.second] += image_content_[index_ + i + 1];
 		}
 	}
 
@@ -165,6 +218,32 @@ int Jpeg::process_restart_interval(const std::vector<char>& image_content_, int 
 
 int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int index_)
 {
+	int header_size = image_content_[index_] * 0x100 + image_content_[index_ + 1];
+	int number_components_to_read = image_content_[index_ + 2];
+
+	index_ += 3;
+
+	struct component_t
+	{
+		int id;
+		int id_for_AC_and_DC_coefs;
+	};
+
+	std::vector<component_t> components(number_components_to_read);
+
+	for (int i = 0; i < components.size(); i++)
+	{
+		components[i].id = image_content_[index_ + 2 * i];
+		components[i].id_for_AC_and_DC_coefs = image_content_[index_ + 2 * i + 1];
+	}
+
+	index_ += components.size() * 2;
+	index_ += 3; // TODO: I don't know what exactly means these 3 bytes 
+
+	while (index_ < image_content_.size() - 2)
+	{
+		// TODO
+	}
 }
 
 int Jpeg::process_restart(const std::vector<char>& image_content_, int index_)
