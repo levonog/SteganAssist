@@ -1,5 +1,6 @@
 #pragma once
 #include<vector>
+#include<algorithm>
 
 class Jpeg
 {
@@ -8,24 +9,33 @@ class Jpeg
 	public:
 		struct Node
 		{
-			Node *left, *right;
-			int value;
-			bool code_end;
+			Node *_left, *_right;
+			int _value;
+			bool _code_end;
 			Node();
 		};
 	private:
 		
-		Node* root;
-		Node* state;
+		Node* _root;
+		Node* _state;
 
-		bool add_element(Node*& current_node, int lenght, int value);
+		bool add_element(Node*& current_node_, int lenght_, int value_);
 	public:
 
 		HuffmanTree();
-		void AddElement(int lenght, int value);
-		Node* NextState(int way);
+		void AddElement(int lenght_, int value_);
+		Node* NextState(int way_);
 		void Reset();
 	};
+
+	struct Frame
+	{
+		short _identifier;
+		short _horizontal_thinning;
+		short _vertical_thinning;
+		short _identifier_of_quantization_table;
+	};
+
 private:
 	enum markers
 	{
@@ -56,49 +66,54 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
-	int process_start_of_image(const std::vector<char>& image_content, int index);
-	int process_start_of_frame_simple(const std::vector<char>& image_content, int index);
-	int process_start_of_frame_extended(const std::vector<char>& image_content, int index);
-	int process_start_of_frame_progressive(const std::vector<char>& image_content, int index);
-	int process_huffman_table(const std::vector<char>& image_content, int index);
-	int process_quantization_table(const std::vector<char>& image_content, int index);
-	int process_restart_interval(const std::vector<char>& image_content, int index);
-	int process_start_of_scan(const std::vector<char>& image_content, int index);
-	int process_restart(const std::vector<char>& image_content, int index);
-	int process_application_specific(const std::vector<char>& image_content, int index);
-	int process_comment(const std::vector<char>& image_content, int index);
-	int process_end_of_image(const std::vector<char>& image_content, int index);
-	HuffmanTree* tree;
-	std::string comment;
-	std::vector<std::vector<std::vector<short>>> quantization_tables;
-public:
-	Jpeg(const std::vector<char>& image_content)
-	{
-		quantization_tables.resize(0xF);
+	int process_start_of_image(const std::vector<char>& image_content_, int index_);
+	int process_start_of_frame_simple(const std::vector<char>& image_content_, int index_);
+	int process_start_of_frame_extended(const std::vector<char>& image_content_, int index_);
+	int process_start_of_frame_progressive(const std::vector<char>& image_content_, int index_);
+	int process_huffman_table(const std::vector<char>& image_content_, int index_);
+	int process_quantization_table(const std::vector<char>& image_content_, int index_);
+	int process_restart_interval(const std::vector<char>& image_content_, int index_);
+	int process_start_of_scan(const std::vector<char>& image_content_, int index_);
+	int process_restart(const std::vector<char>& image_content_, int index_);
+	int process_application_specific(const std::vector<char>& image_content_, int index_);
+	int process_comment(const std::vector<char>& image_content_, int index_);
+	int process_end_of_image(const std::vector<char>& image_content_, int index_);
+	HuffmanTree* _tree;
+	std::string _comment;
+	std::vector<std::vector<std::vector<short>>> _quantization_tables;
+	std::vector<Frame> _frames;
+	short _max_horizontal_thinning;
+	short _max_vertical_thinning;
 
-		for (int i = 0; i < image_content.size() - 1; i++)
+
+public:
+	Jpeg(const std::vector<char>& image_content_)
+	{
+		_quantization_tables.resize(0x10);
+
+		for (int i = 0; i < image_content_.size() - 1; i++)
 		{
-			if (image_content[i] == 0xFF)
+			if (image_content_[i] == 0xFF)
 			{
-				char marker = image_content[i + 1];
+				char marker = image_content_[i + 1];
 				switch (marker)
 				{
 				case SOI:
-					i += process_start_of_image(image_content, i + 2);
+					i += process_start_of_image(image_content_, i + 2);
 				case SOF0:
-					i += process_start_of_frame_simple(image_content, i + 2);
+					i += process_start_of_frame_simple(image_content_, i + 2);
 				case SOF1:
-					i += process_start_of_frame_extended(image_content, i + 2);
+					i += process_start_of_frame_extended(image_content_, i + 2);
 				case SOF2:
-					i += process_start_of_frame_progressive(image_content, i + 2);
+					i += process_start_of_frame_progressive(image_content_, i + 2);
 				case DHT:
-					i += process_huffman_table(image_content, i + 2);
+					i += process_huffman_table(image_content_, i + 2);
 				case DQT:
-					i += process_quantization_table(image_content, i + 2);
+					i += process_quantization_table(image_content_, i + 2);
 				case DRI:
-					i += process_restart_interval(image_content, i + 2);
+					i += process_restart_interval(image_content_, i + 2);
 				case SOS:
-					i += process_start_of_scan(image_content, i + 2);
+					i += process_start_of_scan(image_content_, i + 2);
 				case RST0:
 				case RST1:
 				case RST2:
@@ -107,7 +122,7 @@ public:
 				case RST5:
 				case RST6:
 				case RST7:
-					i += process_restart(image_content, i + 1); // + 1 is for understanding restart type
+					i += process_restart(image_content_, i + 1); // + 1 is for understanding restart type
 				case APP0:
 				case APP1:
 				case APP2:
@@ -116,11 +131,11 @@ public:
 				case APP5:
 				case APP6:
 				case APP7:
-					i += process_application_specific(image_content, i + 1); // + 1 is for understanding application type
+					i += process_application_specific(image_content_, i + 1); // + 1 is for understanding application type
 				case COM:
-					i += process_comment(image_content, i + 2);
+					i += process_comment(image_content_, i + 2);
 				case EOI:
-					i += process_end_of_image(image_content, i + 2);
+					i += process_end_of_image(image_content_, i + 2);
 				default:
 					throw std::runtime_error("Strange type of marker");
 				}
