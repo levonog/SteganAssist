@@ -8,12 +8,25 @@ class Jpeg
 	class HuffmanTree
 	{
 	public:
+
 		struct Node
 		{
 			Node *_left, *_right;
 			int _value;
 			bool _code_end;
 			Node();
+		};
+
+		class HuffmanTreeIterator
+		{
+			Node* _state;
+			Node* _root;
+		public:
+			HuffmanTreeIterator(HuffmanTree* tree_);
+			HuffmanTreeIterator* Step(int way_);
+			bool IsCodeEnd();
+			int GetValue();
+			void Reset();
 		};
 	private:
 		
@@ -25,10 +38,10 @@ class Jpeg
 
 		HuffmanTree();
 		void AddElement(int lenght_, int value_);
-		Node* NextState(int way_);
-		void Reset();
+		Node* GetRoot();
 	};
 
+	
 	struct Frame
 	{
 		int _id;
@@ -68,7 +81,7 @@ private:
 		EOI = 0xD9, // End Of Image
 	};
 	bool check_for_image_correctness(const std::vector<char>& image_content_);
-	int process_start_of_image(const std::vector<char>& image_content_, int index_);
+	// int process_start_of_image(const std::vector<char>& image_content_, int index_);
 	int process_start_of_frame_simple(const std::vector<char>& image_content_, int index_);
 	int process_start_of_frame_extended(const std::vector<char>& image_content_, int index_);
 	int process_start_of_frame_progressive(const std::vector<char>& image_content_, int index_);
@@ -79,8 +92,8 @@ private:
 	int process_restart(const std::vector<char>& image_content_, int index_);
 	int process_application_specific(const std::vector<char>& image_content_, int index_);
 	int process_comment(const std::vector<char>& image_content_, int index_);
-	int process_end_of_image(const std::vector<char>& image_content_, int index_);
-	std::map<int, HuffmanTree> _huffman_trees;
+	// int process_end_of_image(const std::vector<char>& image_content_, int index_);
+	std::map<int, HuffmanTree*> _huffman_trees;
 	std::string _comment;
 	std::vector<std::vector<std::vector<int>>> _quantization_tables;
 	std::vector<Frame> _frames;
@@ -100,8 +113,8 @@ public:
 				char marker = image_content_[i + 1];
 				switch (marker)
 				{
-				case SOI:
-					i += process_start_of_image(image_content_, i + 2);
+				/*case SOI:
+					i += process_start_of_image(image_content_, i + 2);*/
 				case SOF0:
 					i += process_start_of_frame_simple(image_content_, i + 2);
 				case SOF1:
@@ -136,8 +149,8 @@ public:
 					i += process_application_specific(image_content_, i + 1); // + 1 is for understanding application type
 				case COM:
 					i += process_comment(image_content_, i + 2);
-				case EOI:
-					i += process_end_of_image(image_content_, i + 2);
+				//case EOI:
+				//	i += process_end_of_image(image_content_, i + 2);
 				default:
 					throw std::runtime_error("Strange type of marker");
 				}

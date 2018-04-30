@@ -45,21 +45,10 @@ void Jpeg::HuffmanTree::AddElement(int lenght_, int value_)
 	add_element(_root, lenght_, value_);
 }
 
-Jpeg::HuffmanTree::Node* Jpeg::HuffmanTree::NextState(int way_)
+Jpeg::HuffmanTree::Node * Jpeg::HuffmanTree::GetRoot()
 {
-	_state = (way_ == 0 ? _state->_left : _state->_right);
-	if (_state == nullptr)
-	{
-		throw std::exception("Something goes wrong");
-	}
-	return _state;
+	return _root;
 }
-
-void Jpeg::HuffmanTree::Reset()
-{
-	_state = _root;
-}
-
 
 
 bool Jpeg::check_for_image_correctness(const std::vector<char>& image_content_)
@@ -79,10 +68,6 @@ bool Jpeg::check_for_image_correctness(const std::vector<char>& image_content_)
 	// TODO: add another checks
 }
 
-int Jpeg::process_start_of_image(const std::vector<char>& image_content__, int index_)
-{
-	return 0;
-}
 
 int Jpeg::process_start_of_frame_simple(const std::vector<char>& image_content_, int index_)
 {
@@ -117,12 +102,12 @@ int Jpeg::process_start_of_frame_simple(const std::vector<char>& image_content_,
 
 int Jpeg::process_start_of_frame_extended(const std::vector<char>& image_content_, int index_)
 {
-	return 0;
+	throw std::exception("Not implemented yet");
 }
 
 int Jpeg::process_start_of_frame_progressive(const std::vector<char>& image_content_, int index_)
 {
-	return 0;
+	throw std::exception("Not implemented yet");
 }
 
 int Jpeg::process_huffman_table(const std::vector<char>& image_content_, int index_)
@@ -152,13 +137,14 @@ int Jpeg::process_huffman_table(const std::vector<char>& image_content_, int ind
 
 	index_ += huffman_codes_values.size();
 
-	HuffmanTree& tree = _huffman_trees[table_id];
+	HuffmanTree* tree = new HuffmanTree(); 
+	_huffman_trees[table_id] = tree;
 
 	for (int i = 0, count = 0; i < huffman_codes_lenght.size(); i++)
 	{
 		while (huffman_codes_lenght[i])
 		{
-			tree.AddElement(i, huffman_codes_values[count++]);
+			tree->AddElement(i, huffman_codes_values[count++]);
 			huffman_codes_lenght[i]--;
 		}
 	}
@@ -214,6 +200,7 @@ int Jpeg::process_quantization_table(const std::vector<char>& image_content_, in
 
 int Jpeg::process_restart_interval(const std::vector<char>& image_content_, int index_)
 {
+	throw std::exception("Not implemented yet");
 }
 
 int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int index_)
@@ -226,7 +213,7 @@ int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int ind
 	struct component_t
 	{
 		int id;
-		int id_for_AC_and_DC_coefs;
+		int id_for_DC_and_AC_coefs;
 	};
 
 	std::vector<component_t> components(number_components_to_read);
@@ -234,20 +221,63 @@ int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int ind
 	for (int i = 0; i < components.size(); i++)
 	{
 		components[i].id = image_content_[index_ + 2 * i];
-		components[i].id_for_AC_and_DC_coefs = image_content_[index_ + 2 * i + 1];
+		components[i].id_for_DC_and_AC_coefs = image_content_[index_ + 2 * i + 1];
 	}
 
 	index_ += components.size() * 2;
-	index_ += 3; // TODO: I don't know what exactly means these 3 bytes 
+	index_ += 3; // TODO: I don't know what exactly means these 3 bytes
 
-	while (index_ < image_content_.size() - 2)
+	for (int component_number = 0; component_number < components.size(); component_number++)
 	{
-		// TODO
+		HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator = 
+			new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_number].id_for_DC_and_AC_coefs & 0xF0]);
+
+		// if ( i % 2 == 0 ) -> DC coef
+		// if ( i % 2 == 1 ) -> AC coef
+
+		int size_of_code = 0;
+		int first_bit = 0;
+		while (index_ < image_content_.size() - 2)
+		{
+			for (int bit_number = 3; bit_number >= 0; bit_number--)
+			{
+				int bit = image_content_[index_] & (1 << bit_number);
+				huffman_tree_iterator->Step(bit);
+				size_of_code++;
+				if (size_of_code == 1)
+				{
+					first_bit = bit;
+				}
+				if (huffman_tree_iterator->IsCodeEnd())
+				{
+					int huffman_tree_value = huffman_tree_iterator->GetValue();
+					int number_of_0_to_add = huffman_tree_value & 0xF0;
+					int bits_to_read = huffman_tree_value & 0x0F;
+
+					int real_value = 0;
+
+					while (bits_to_read--)
+					{
+						real_value *= 2;
+						real_value += 0; // TODO
+					}
+
+					if (first_bit == 1)
+					{
+						
+					}
+				}
+			}
+			index_++;
+		}
 	}
+
+	return -1;
 }
 
 int Jpeg::process_restart(const std::vector<char>& image_content_, int index_)
 {
+	throw std::exception("Not implemented yet");
 }
 
 int Jpeg::process_application_specific(const std::vector<char>& image_content_, int index_)
@@ -267,6 +297,36 @@ int Jpeg::process_comment(const std::vector<char>& image_content_, int index_)
 	return size_of_comment;
 }
 
-int Jpeg::process_end_of_image(const std::vector<char>& image_content_, int index_)
+
+Jpeg::HuffmanTree::HuffmanTreeIterator::HuffmanTreeIterator(HuffmanTree * tree_)
+	: _state(tree_->GetRoot())
+	, _root(tree_->GetRoot())
 {
 }
+
+Jpeg::HuffmanTree::HuffmanTreeIterator * Jpeg::HuffmanTree::HuffmanTreeIterator::Step(int way_)
+{
+	_state = (way_ == 0 ? _state->_left : _state->_right);
+	if (_state == nullptr)
+	{
+		throw std::exception("Something goes wrong");
+	}
+	return this;
+}
+
+bool Jpeg::HuffmanTree::HuffmanTreeIterator::IsCodeEnd()
+{
+	return _state->_code_end;
+}
+
+int Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
+{
+	return _state->_value;
+}
+
+void Jpeg::HuffmanTree::HuffmanTreeIterator::Reset()
+{
+	_state = _root;
+}
+
+
