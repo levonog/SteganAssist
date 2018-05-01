@@ -2,6 +2,7 @@
 #include<map>
 #include<vector>
 #include<algorithm>
+#include"BitStream.h"
 
 class Jpeg
 {
@@ -80,19 +81,22 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
-	bool check_for_image_correctness(const std::vector<char>& image_content_);
-	// int process_start_of_image(const std::vector<char>& image_content_, int index_);
-	int process_start_of_frame_simple(const std::vector<char>& image_content_, int index_);
-	int process_start_of_frame_extended(const std::vector<char>& image_content_, int index_);
-	int process_start_of_frame_progressive(const std::vector<char>& image_content_, int index_);
-	int process_huffman_table(const std::vector<char>& image_content_, int index_);
-	int process_quantization_table(const std::vector<char>& image_content_, int index_);
-	int process_restart_interval(const std::vector<char>& image_content_, int index_);
-	int process_start_of_scan(const std::vector<char>& image_content_, int index_);
-	int process_restart(const std::vector<char>& image_content_, int index_);
-	int process_application_specific(const std::vector<char>& image_content_, int index_);
-	int process_comment(const std::vector<char>& image_content_, int index_);
-	// int process_end_of_image(const std::vector<char>& image_content_, int index_);
+	bool check_for_image_correctness(InputBitStream& image_content_);
+	// void process_start_of_image(InputBitStream& image_content_);
+	void process_start_of_frame_simple(InputBitStream& image_content_);
+	void process_start_of_frame_extended(InputBitStream& image_content_);
+	void process_start_of_frame_progressive(InputBitStream& image_content_);
+	void process_huffman_table(InputBitStream& image_content_);
+	void process_quantization_table(InputBitStream& image_content_);
+	void process_restart_interval(InputBitStream& image_content_);
+	void process_start_of_scan(InputBitStream& image_content_);
+	void process_restart(InputBitStream& image_content_);
+	void process_application_specific(InputBitStream& image_content_);
+	void process_comment(InputBitStream& image_content_);
+	// void process_end_of_image(InputBitStream& image_content_);
+
+	InputBitStream _image_content;
+
 	std::map<int, HuffmanTree*> _huffman_trees;
 	std::string _comment;
 	std::vector<std::vector<std::vector<int>>> _quantization_tables;
@@ -102,33 +106,37 @@ private:
 
 
 public:
-	Jpeg(const std::vector<char>& image_content_)
+	Jpeg(const std::vector<unsigned char>& image_content_)
+		: _image_content(image_content_)
 	{
 		_quantization_tables.resize(0x10);
 
-		for (int i = 0; i < image_content_.size() - 1; i++)
+		byte temp;
+		while ( _image_content >> temp )
 		{
-			if (image_content_[i] == 0xFF)
+			if (temp == 0xFF)
 			{
-				char marker = image_content_[i + 1];
+				byte marker;
+				_image_content >> marker;
+				
 				switch (marker)
 				{
 				/*case SOI:
-					i += process_start_of_image(image_content_, i + 2);*/
+					i += process_start_of_image(_image_content);*/
 				case SOF0:
-					i += process_start_of_frame_simple(image_content_, i + 2);
+					process_start_of_frame_simple(_image_content);
 				case SOF1:
-					i += process_start_of_frame_extended(image_content_, i + 2);
+					process_start_of_frame_extended(_image_content);
 				case SOF2:
-					i += process_start_of_frame_progressive(image_content_, i + 2);
+					process_start_of_frame_progressive(_image_content);
 				case DHT:
-					i += process_huffman_table(image_content_, i + 2);
+					process_huffman_table(_image_content);
 				case DQT:
-					i += process_quantization_table(image_content_, i + 2);
+					process_quantization_table(_image_content);
 				case DRI:
-					i += process_restart_interval(image_content_, i + 2);
+					process_restart_interval(_image_content);
 				case SOS:
-					i += process_start_of_scan(image_content_, i + 2);
+					process_start_of_scan(_image_content);
 				case RST0:
 				case RST1:
 				case RST2:
@@ -137,7 +145,8 @@ public:
 				case RST5:
 				case RST6:
 				case RST7:
-					i += process_restart(image_content_, i + 1); // + 1 is for understanding restart type
+					_image_content.BytesBack(1); // 1 is for understanding restart type
+					process_restart(_image_content); 
 				case APP0:
 				case APP1:
 				case APP2:
@@ -146,15 +155,15 @@ public:
 				case APP5:
 				case APP6:
 				case APP7:
-					i += process_application_specific(image_content_, i + 1); // + 1 is for understanding application type
+					_image_content.BytesBack(1); // 1 is for understanding application type
+					process_application_specific(_image_content);
 				case COM:
-					i += process_comment(image_content_, i + 2);
+					process_comment(_image_content);
 				//case EOI:
-				//	i += process_end_of_image(image_content_, i + 2);
+				//	process_end_of_image(_image_content);
 				default:
 					throw std::runtime_error("Strange type of marker");
 				}
-				i++;
 			}
 		}
 

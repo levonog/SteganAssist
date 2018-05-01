@@ -51,7 +51,7 @@ Jpeg::HuffmanTree::Node * Jpeg::HuffmanTree::GetRoot()
 }
 
 
-bool Jpeg::check_for_image_correctness(const std::vector<char>& image_content_)
+bool Jpeg::check_for_image_correctness(InputBitStream& _image_content)
 {
 	if (image_content_.size() < 4) // TODO: understand, how much can be minimal size of picture
 	{
@@ -69,7 +69,7 @@ bool Jpeg::check_for_image_correctness(const std::vector<char>& image_content_)
 }
 
 
-int Jpeg::process_start_of_frame_simple(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_start_of_frame_simple(InputBitStream& _image_content)
 {
 	int size_of_frame = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 
@@ -100,17 +100,17 @@ int Jpeg::process_start_of_frame_simple(const std::vector<char>& image_content_,
 	return size_of_frame;
 }
 
-int Jpeg::process_start_of_frame_extended(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_start_of_frame_extended(InputBitStream& _image_content)
 {
 	throw std::exception("Not implemented yet");
 }
 
-int Jpeg::process_start_of_frame_progressive(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_start_of_frame_progressive(InputBitStream& _image_content)
 {
 	throw std::exception("Not implemented yet");
 }
 
-int Jpeg::process_huffman_table(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_huffman_table(InputBitStream& _image_content)
 {
 	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 
@@ -151,7 +151,7 @@ int Jpeg::process_huffman_table(const std::vector<char>& image_content_, int ind
 	return size_of_table;
 }
 
-int Jpeg::process_quantization_table(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_quantization_table(InputBitStream& _image_content)
 {
 	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 
@@ -198,12 +198,12 @@ int Jpeg::process_quantization_table(const std::vector<char>& image_content_, in
 	return size_of_table;
 }
 
-int Jpeg::process_restart_interval(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_restart_interval(InputBitStream& _image_content)
 {
 	throw std::exception("Not implemented yet");
 }
 
-int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_start_of_scan(InputBitStream& _image_content)
 {
 	int header_size = image_content_[index_] * 0x100 + image_content_[index_ + 1];
 	int number_components_to_read = image_content_[index_ + 2];
@@ -271,30 +271,29 @@ int Jpeg::process_start_of_scan(const std::vector<char>& image_content_, int ind
 			index_++;
 		}
 	}
-
-	return -1;
 }
 
-int Jpeg::process_restart(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_restart(InputBitStream& _image_content)
 {
 	throw std::exception("Not implemented yet");
 }
 
-int Jpeg::process_application_specific(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_application_specific(InputBitStream& _image_content)
 {
-	return 0;
 }
 
-int Jpeg::process_comment(const std::vector<char>& image_content_, int index_)
+void Jpeg::process_comment(InputBitStream& _image_content)
 {
-	int size_of_comment = image_content_[index_] * 0x100 + image_content_[index_ + 1];
+	byte size_1, size_2;
+	_image_content >> size_1 >> size_2;
+	int size_of_comment = size_1 * 0x100 + size_2;
 
 	for ( int i = 2 ; i < size_of_comment; i++ )
 	{
-		_comment += image_content_[index_ + i];
+		byte temp;
+		_image_content >> temp;
+		_comment += temp;
 	}
-
-	return size_of_comment;
 }
 
 
@@ -319,7 +318,7 @@ bool Jpeg::HuffmanTree::HuffmanTreeIterator::IsCodeEnd()
 	return _state->_code_end;
 }
 
-int Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
+void Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
 {
 	return _state->_value;
 }
