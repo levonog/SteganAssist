@@ -17,6 +17,41 @@ InputBitStream::InputBitStream(const std::string & buffer_)
 {
 }
 
+InputBitStream & InputBitStream::operator>>(bit& value_)
+{
+	value_ = 0;
+	if (_index < _buffer.size())
+	{
+		value_ = bool(_buffer[_index] & (1 << _bit_number));
+		_bit_number--;
+		if (_bit_number == -1)
+		{
+			_bit_number = 7;
+			_index++;
+		}
+	}
+	else
+	{
+		_stream_end = true;
+	}
+	return *this;
+}
+InputBitStream & InputBitStream::operator>>(byte& value_)
+{
+	value_ = 0;
+	if (_index < _buffer.size())
+	{
+		value_ = _buffer[_index];
+		_index++;
+	}
+	else
+	{
+		_stream_end = true;
+	}
+	return *this;
+}
+
+
 InputBitStream::operator bool() const
 {
 	return !_stream_end;
@@ -32,10 +67,10 @@ void InputBitStream::BitsBack(int number_of_bits_to_revert_)
 		_bit_number += 8;
 		_index--;
 	}
-	this->CharsBack(chars_number);
+	this->BytesBack(chars_number);
 }
 
-void InputBitStream::CharsBack(int number_of_chars_to_revert_)
+void InputBitStream::BytesBack(int number_of_chars_to_revert_)
 {
 	_index -= number_of_chars_to_revert_;
 	_index = std::max(_index, 0);

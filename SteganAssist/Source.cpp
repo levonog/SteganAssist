@@ -10,8 +10,8 @@ int main()
 	
 	InputBitStream bs(vec);
 
-	int q;
-	while (bs >> q)
+	byte q;
+	while(bs >> q)
 	{
 		std::cout << q << " ";
 	}
