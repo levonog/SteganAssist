@@ -16,6 +16,7 @@ InputBitStream::InputBitStream(const std::string & buffer_)
 	, _stream_end(false)
 {
 }
+
 InputBitStream::operator bool() const
 {
 	return !_stream_end;

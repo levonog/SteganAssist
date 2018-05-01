@@ -1,17 +1,19 @@
 #include<iostream>
+#include<iomanip>
 #include"Jpeg.h"
 #include"BitStream.h"
 
 int main()
 {
-	std::vector<unsigned char> vec = { 255, 2, 3 };
+
+	std::vector<unsigned char> vec = { 1, 2, 3 };
 	
 	InputBitStream bs(vec);
 
-	int a;
-	while (bs >> a)
+	int q;
+	while (bs >> q)
 	{
-		std::cout << a;
+		std::cout << q << " ";
 	}
 
 
