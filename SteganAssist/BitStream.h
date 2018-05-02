@@ -35,6 +35,8 @@ public:
 	void BitsBack(int number_of_bits_to_revert_);
 	void BytesBack(int number_of_chars_to_revert_);
 
+	unsigned int Size() const;
+
 	InputBitStream& operator>> (bit& value);
 	InputBitStream& operator>> (byte& value);
 };

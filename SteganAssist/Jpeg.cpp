@@ -51,7 +51,7 @@ Jpeg::HuffmanTree::Node * Jpeg::HuffmanTree::GetRoot()
 }
 
 
-bool Jpeg::check_for_image_correctness(InputBitStream& _image_content)
+bool Jpeg::check_for_image_correctness(const std::vector<unsigned char>& image_content_)
 {
 	if (image_content_.size() < 4) // TODO: understand, how much can be minimal size of picture
 	{
@@ -66,76 +66,81 @@ bool Jpeg::check_for_image_correctness(InputBitStream& _image_content)
 		throw std::exception("This is not JPEG file, end bytes are note matching");
 	}
 	// TODO: add another checks
+	return true;
 }
 
-
-void Jpeg::process_start_of_frame_simple(InputBitStream& _image_content)
+void Jpeg::process_start_of_frame_simple(InputBitStream& image_content_)
 {
-	int size_of_frame = image_content_[index_] * 0x100 + image_content_[index_ + 1];
+	byte size_1, size_2;
+	image_content_ >> size_1 >> size_2;
+	int size_of_frame = size_1 * 0x100 + size_2;
 
-	int precision = image_content_[index_ + 2];
-	int picture_height = image_content_[index_ + 3] * 0x100 + image_content_[index_ + 4];
-	int picture_width = image_content_[index_ + 5] * 0x100 + image_content_[index_ + 6];
+	byte precision;
+	image_content_ >> precision;
+	byte picture_height_1, picture_height_2;
+	image_content_ >> picture_height_1 >> picture_height_2;
+	int picture_height = picture_height_1 * 0x100 + picture_height_2;
+	byte picture_width_1, picture_width_2;
+	image_content_ >> picture_width_1 >> picture_width_2;
+	int picture_width = picture_width_1 * 0x100 + picture_width_2;
 
-	int components_count = image_content_[index_ + 7];
-	index_ += 8;
+	byte components_count;
+	image_content_ >> components_count;
 
-	_max_horizontal_thinning = SHRT_MIN;
-	_max_vertical_thinning = SHRT_MIN;
+	_max_horizontal_thinning = 0;
+	_max_vertical_thinning = 0;
 
 	for (int i = 0; i < components_count; i++)
 	{
 		Frame frame;
-		frame._id = image_content_[index_];
-		frame._horizontal_thinning = image_content_[index_ + 1] & 0xF0;
-		frame._vertical_thinning = image_content_[index_ + 1] & 0x0F;
-		frame._id_of_quantization_table = image_content_[index_ + 2];
+		image_content_ >> frame._id;
+		byte thinning;
+		image_content_ >> thinning;
+		frame._horizontal_thinning = thinning & 0xF0;
+		frame._vertical_thinning = thinning & 0x0F;
+
+		image_content_ >> frame._id_of_quantization_table;
 		_frames.push_back(frame);
 
 		_max_horizontal_thinning = std::max(frame._horizontal_thinning, _max_horizontal_thinning);
 		_max_vertical_thinning = std::max(frame._vertical_thinning, _max_vertical_thinning);
-
-		index_ += 3;
 	}
-	return size_of_frame;
 }
 
-void Jpeg::process_start_of_frame_extended(InputBitStream& _image_content)
+void Jpeg::process_start_of_frame_extended(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_start_of_frame_progressive(InputBitStream& _image_content)
+void Jpeg::process_start_of_frame_progressive(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_huffman_table(InputBitStream& _image_content)
+void Jpeg::process_huffman_table(InputBitStream& image_content_)
 {
-	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
+	byte size_1, size_2;
+	image_content_ >> size_1 >> size_2;
+	int size_of_table = size_1 * 0x100 + size_2;
 
-	int coef_type = image_content_[index_ + 2] & 0xF0;
-	int table_id = image_content_[index_ + 2] & 0x0F;
+	byte temp;
+	image_content_ >> temp;
+	byte coef_type = temp & 0xF0;
+	byte table_id = temp & 0x0F;
 
-	index_ += 3;
-
-	std::vector<int> huffman_codes_lenght(0x100);
+	std::vector<byte> huffman_codes_lenght(0x100);
 	int number_of_lengths = 0;
 	for (int i = 0; i < huffman_codes_lenght.size(); i++)
 	{
-		huffman_codes_lenght[i] = image_content_[index_ + i];
+		image_content_ >> huffman_codes_lenght[i];
 		number_of_lengths += huffman_codes_lenght[i];
 	}
 
-	index_ += huffman_codes_lenght.size();
-
-	std::vector<int> huffman_codes_values(number_of_lengths);
+	std::vector<byte> huffman_codes_values(number_of_lengths);
 	for (int i = 0; i < huffman_codes_values.size(); i++)
 	{
-		huffman_codes_values[i] = image_content_[index_ + i];
+		image_content_ >> huffman_codes_values[i];
 	}
-
-	index_ += huffman_codes_values.size();
 
 	HuffmanTree* tree = new HuffmanTree(); 
 	_huffman_trees[table_id] = tree;
@@ -148,16 +153,20 @@ void Jpeg::process_huffman_table(InputBitStream& _image_content)
 			huffman_codes_lenght[i]--;
 		}
 	}
-	return size_of_table;
 }
 
-void Jpeg::process_quantization_table(InputBitStream& _image_content)
+void Jpeg::process_quantization_table(InputBitStream& image_content_)
 {
-	int size_of_table = image_content_[index_] * 0x100 + image_content_[index_ + 1];
+	byte size_1, size_2;
+	image_content_ >> size_1 >> size_2;
+	int size_of_table = size_1 * 0x100 +  size_2;
 
-	int value_in_2_bytes = image_content_[index_ + 2] & 0xF0;
-	int table_id = image_content_[index_ + 2] & 0x0F;
-	int size_of_matrix = sqrt(size_of_table - 3);
+	byte temp;
+	image_content_ >> temp;
+	int value_in_2_bytes = temp & 0xF0;
+	int table_id = temp & 0x0F;
+
+	int size_of_matrix = (int)sqrt(size_of_table - 3);
 
 	_quantization_tables[table_id].resize(size_of_matrix, std::vector<int>(size_of_matrix));
 
@@ -187,45 +196,49 @@ void Jpeg::process_quantization_table(InputBitStream& _image_content)
 	for (int i = 3, t = 0; i < size_of_table; i += 1 + value_in_2_bytes, t++)
 	{
 		std::pair<int, int> next_index_ = indices[t];
-		_quantization_tables[table_id][next_index_.first][next_index_.second] = image_content_[index_ + i];
+		byte first_byte_of_value;
+		image_content_ >> first_byte_of_value;
+		_quantization_tables[table_id][next_index_.first][next_index_.second] = first_byte_of_value;
 		if (value_in_2_bytes)
 		{
 			_quantization_tables[table_id][next_index_.first][next_index_.second] *= 0x100;
-			_quantization_tables[table_id][next_index_.first][next_index_.second] += image_content_[index_ + i + 1];
+			byte second_byte_of_value;
+			image_content_ >> second_byte_of_value;
+			_quantization_tables[table_id][next_index_.first][next_index_.second] += second_byte_of_value;
 		}
 	}
-
-	return size_of_table;
 }
 
-void Jpeg::process_restart_interval(InputBitStream& _image_content)
+void Jpeg::process_restart_interval(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_start_of_scan(InputBitStream& _image_content)
+void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 {
-	int header_size = image_content_[index_] * 0x100 + image_content_[index_ + 1];
-	int number_components_to_read = image_content_[index_ + 2];
-
-	index_ += 3;
+	byte size_1, size_2;
+	image_content_ >> size_1 >> size_2;
+	int header_size = size_1 * 0x100 + size_2;
+	byte number_components_to_read;
+	image_content_ >> number_components_to_read;
 
 	struct component_t
 	{
-		int id;
-		int id_for_DC_and_AC_coefs;
+		byte id;
+		byte id_for_DC_and_AC_coefs;
 	};
 
 	std::vector<component_t> components(number_components_to_read);
 
 	for (int i = 0; i < components.size(); i++)
 	{
-		components[i].id = image_content_[index_ + 2 * i];
-		components[i].id_for_DC_and_AC_coefs = image_content_[index_ + 2 * i + 1];
+		image_content_ >> components[i].id;
+		image_content_ >> components[i].id_for_DC_and_AC_coefs;
 	}
 
-	index_ += components.size() * 2;
-	index_ += 3; // TODO: I don't know what exactly means these 3 bytes
+	// TODO: I don't know what exactly means these 3 bytes
+	byte unknown[3];
+	image_content_ >> unknown[0] >> unknown[1] >> unknown[2];
 
 	for (int component_number = 0; component_number < components.size(); component_number++)
 	{
@@ -237,61 +250,58 @@ void Jpeg::process_start_of_scan(InputBitStream& _image_content)
 
 		int size_of_code = 0;
 		int first_bit = 0;
-		while (index_ < image_content_.size() - 2)
+		bit next;
+		while (image_content_ >> next)
 		{
-			for (int bit_number = 3; bit_number >= 0; bit_number--)
+			// int bit = image_content_[index_] & (1 << bit_number);
+			huffman_tree_iterator->Step(next);
+			size_of_code++;
+			if (size_of_code == 1)
 			{
-				int bit = image_content_[index_] & (1 << bit_number);
-				huffman_tree_iterator->Step(bit);
-				size_of_code++;
-				if (size_of_code == 1)
+				first_bit = next;
+			}
+			if (huffman_tree_iterator->IsCodeEnd())
+			{
+				int huffman_tree_value = huffman_tree_iterator->GetValue();
+				int number_of_0_to_add = huffman_tree_value & 0xF0;
+				int bits_to_read = huffman_tree_value & 0x0F;
+
+				int real_value = 0;
+
+				while (bits_to_read--)
 				{
-					first_bit = bit;
+					real_value *= 2;
+					real_value += 0; // TODO
 				}
-				if (huffman_tree_iterator->IsCodeEnd())
+
+				if (first_bit == 1)
 				{
-					int huffman_tree_value = huffman_tree_iterator->GetValue();
-					int number_of_0_to_add = huffman_tree_value & 0xF0;
-					int bits_to_read = huffman_tree_value & 0x0F;
-
-					int real_value = 0;
-
-					while (bits_to_read--)
-					{
-						real_value *= 2;
-						real_value += 0; // TODO
-					}
-
-					if (first_bit == 1)
-					{
-						
-					}
+					
 				}
 			}
-			index_++;
 		}
 	}
 }
 
-void Jpeg::process_restart(InputBitStream& _image_content)
+void Jpeg::process_restart(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_application_specific(InputBitStream& _image_content)
+void Jpeg::process_application_specific(InputBitStream& image_content_)
 {
 }
 
-void Jpeg::process_comment(InputBitStream& _image_content)
+void Jpeg::process_comment(InputBitStream& image_content_)
 {
 	byte size_1, size_2;
-	_image_content >> size_1 >> size_2;
+	image_content_ >> size_1 >> size_2;
 	int size_of_comment = size_1 * 0x100 + size_2;
 
 	for ( int i = 2 ; i < size_of_comment; i++ )
 	{
 		byte temp;
-		_image_content >> temp;
+		image_content_ >> temp;
 		_comment += temp;
 	}
 }
@@ -318,7 +328,7 @@ bool Jpeg::HuffmanTree::HuffmanTreeIterator::IsCodeEnd()
 	return _state->_code_end;
 }
 
-void Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
+int Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
 {
 	return _state->_value;
 }

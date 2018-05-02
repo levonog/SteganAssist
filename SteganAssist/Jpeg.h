@@ -45,10 +45,10 @@ class Jpeg
 	
 	struct Frame
 	{
-		int _id;
-		int _horizontal_thinning;
-		int _vertical_thinning;
-		int _id_of_quantization_table;
+		byte _id;
+		byte _horizontal_thinning;
+		byte _vertical_thinning;
+		byte _id_of_quantization_table;
 	};
 
 private:
@@ -81,7 +81,7 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
-	bool check_for_image_correctness(InputBitStream& image_content_);
+	bool check_for_image_correctness(const std::vector<unsigned char>& image_content_);
 	// void process_start_of_image(InputBitStream& image_content_);
 	void process_start_of_frame_simple(InputBitStream& image_content_);
 	void process_start_of_frame_extended(InputBitStream& image_content_);
@@ -101,14 +101,16 @@ private:
 	std::string _comment;
 	std::vector<std::vector<std::vector<int>>> _quantization_tables;
 	std::vector<Frame> _frames;
-	int _max_horizontal_thinning;
-	int _max_vertical_thinning;
+	byte _max_horizontal_thinning;
+	byte _max_vertical_thinning;
 
 
 public:
 	Jpeg(const std::vector<unsigned char>& image_content_)
 		: _image_content(image_content_)
 	{
+		check_for_image_correctness(image_content_);
+
 		_quantization_tables.resize(0x10);
 
 		byte temp;

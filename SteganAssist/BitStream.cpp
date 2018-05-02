@@ -75,3 +75,8 @@ void InputBitStream::BytesBack(int number_of_chars_to_revert_)
 	_index -= number_of_chars_to_revert_;
 	_index = std::max(_index, 0);
 }
+
+unsigned int InputBitStream::Size() const
+{
+	return _buffer.size() - _index;
+}
