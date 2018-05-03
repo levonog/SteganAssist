@@ -13,7 +13,7 @@ class Jpeg
 		struct Node
 		{
 			Node *_left, *_right;
-			int _value;
+			byte _value;
 			bool _code_end;
 			Node();
 		};
@@ -26,7 +26,7 @@ class Jpeg
 			HuffmanTreeIterator(HuffmanTree* tree_);
 			HuffmanTreeIterator* Step(int way_);
 			bool IsCodeEnd();
-			int GetValue();
+			byte GetValue();
 			void Reset();
 		};
 	private:
@@ -93,6 +93,7 @@ private:
 	void process_restart(InputBitStream& image_content_);
 	void process_application_specific(InputBitStream& image_content_);
 	void process_comment(InputBitStream& image_content_);
+	void calculating_zigzag_order_traversal(int size_of_table_, int size_of_matrix_);
 	// void process_end_of_image(InputBitStream& image_content_);
 
 	InputBitStream _image_content;
@@ -100,6 +101,7 @@ private:
 	std::map<int, HuffmanTree*> _huffman_trees;
 	std::string _comment;
 	std::vector<std::vector<std::vector<int>>> _quantization_tables;
+	std::vector<std::pair<int, int>> _zigzag_order_traversal_indices;
 	std::vector<Frame> _frames;
 	byte _max_horizontal_thinning;
 	byte _max_vertical_thinning;
