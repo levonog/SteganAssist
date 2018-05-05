@@ -231,7 +231,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 		}
 		for (int matrix_number = 0; matrix_number < 6; matrix_number++)
 		{
-			int component_index = std::max(matrix_number - 4, 0);
+			int component_index = std::max(component_index - 4, 0);
 			HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator =
 				new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs >> 4][coef_type::DC]);
 			std::vector<std::vector<byte>> matrix(_quantization_tables.size(), std::vector<byte>(_quantization_tables.size()));

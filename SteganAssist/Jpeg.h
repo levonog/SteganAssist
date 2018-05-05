@@ -82,6 +82,11 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
+	enum coef_type 
+	{ 
+		DC = 0, 
+		AC = 1 
+	};
 	bool check_for_image_correctness(InputBitStream& image_content_);
 	// void process_start_of_image(InputBitStream& image_content_);
 	void process_start_of_frame_simple(InputBitStream& image_content_);
@@ -99,7 +104,7 @@ private:
 
 	InputBitStream _image_content;
 
-	std::map<int, HuffmanTree*> _huffman_trees;
+	std::map<int,std::vector<HuffmanTree*>> _huffman_trees; // trees for DC and AC coefs
 	std::string _comment;
 	std::vector<std::vector<std::vector<int>>> _quantization_tables;
 	std::vector<std::pair<int, int>> _zigzag_order_traversal_indices;
@@ -120,68 +125,69 @@ public:
 		byte temp;
 		while ( _image_content >> temp )
 		{
-			if (temp == 0xFF)
+			if (temp != 0xFF)
 			{
-				byte marker;
-				_image_content >> marker;
+				throw std::exception("There must be 0xFF byte");
+			}
+			byte marker;
+			_image_content >> marker;
 				
-				switch (marker)
-				{
-				case SOI:
-					/*i += process_start_of_image(_image_content);*/
-					break;
-				case SOF0:
-					process_start_of_frame_simple(_image_content);
-					break;
-				case SOF1:
-					process_start_of_frame_extended(_image_content);
-					break;
-				case SOF2:
-					process_start_of_frame_progressive(_image_content);
-					break;
-				case DHT:
-					process_huffman_table(_image_content);
-					break;
-				case DQT:
-					process_quantization_table(_image_content);
-					break;
-				case DRI:
-					process_restart_interval(_image_content);
-					break;
-				case SOS:
-					process_start_of_scan(_image_content);
-					break;
-				case RST0:
-				case RST1:
-				case RST2:
-				case RST3:
-				case RST4:
-				case RST5:
-				case RST6:
-				case RST7:
-					_image_content.BytesBack(1); // 1 is for understanding restart type
-					process_restart(_image_content); 
-					break;
-				case APP0:
-				case APP1:
-				case APP2:
-				case APP3:
-				case APP4:
-				case APP5:
-				case APP6:
-				case APP7:
-					_image_content.BytesBack(1); // 1 is for understanding application type
-					process_application_specific(_image_content);
-					break;
-				case COM:
-					process_comment(_image_content);
-					break;
-				case EOI:
-					break;
-				//	process_end_of_image(_image_content);
-				default:
-					throw std::runtime_error("Strange type of marker");
-				}
+			switch (marker)
+			{
+			case SOI:
+				/*i += process_start_of_image(_image_content);*/
+				break;
+			case SOF0:
+				process_start_of_frame_simple(_image_content);
+				break;
+			case SOF1:
+				process_start_of_frame_extended(_image_content);
+				break;
+			case SOF2:
+				process_start_of_frame_progressive(_image_content);
+				break;
+			case DHT:
+				process_huffman_table(_image_content);
+				break;
+			case DQT:
+				process_quantization_table(_image_content);
+				break;
+			case DRI:
+				process_restart_interval(_image_content);
+				break;
+			case SOS:
+				process_start_of_scan(_image_content);
+				break;
+			case RST0:
+			case RST1:
+			case RST2:
+			case RST3:
+			case RST4:
+			case RST5:
+			case RST6:
+			case RST7:
+				_image_content.BytesBack(1); // 1 is for understanding restart type
+				process_restart(_image_content); 
+				break;
+			case APP0:
+			case APP1:
+			case APP2:
+			case APP3:
+			case APP4:
+			case APP5:
+			case APP6:
+			case APP7:
+				_image_content.BytesBack(1); // 1 is for understanding application type
+				process_application_specific(_image_content);
+				break;
+			case COM:
+				process_comment(_image_content);
+				break;
+			case EOI:
+				break;
+			//	process_end_of_image(_image_content);
+			default:
+				throw std::runtime_error("Strange type of marker");
 			}
 		}
 
