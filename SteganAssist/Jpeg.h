@@ -3,6 +3,7 @@
 #include<vector>
 #include<algorithm>
 #include"BitStream.h"
+#include"ImageFileBuffer.h"
 
 class Jpeg
 {
@@ -81,7 +82,7 @@ private:
 		COM = 0xFE, // Comment
 		EOI = 0xD9, // End Of Image
 	};
-	bool check_for_image_correctness(const std::vector<unsigned char>& image_content_);
+	bool check_for_image_correctness(InputBitStream& image_content_);
 	// void process_start_of_image(InputBitStream& image_content_);
 	void process_start_of_frame_simple(InputBitStream& image_content_);
 	void process_start_of_frame_extended(InputBitStream& image_content_);
@@ -108,10 +109,11 @@ private:
 
 
 public:
-	Jpeg(const std::vector<unsigned char>& image_content_)
-		: _image_content(image_content_)
+	// Jpeg(const std::vector<unsigned char>& image_content_)
+	Jpeg(const std::string& file_path)
+		: _image_content(ImageFileBuffer(file_path).Get())
 	{
-		check_for_image_correctness(image_content_);
+		// check_for_image_correctness(_image_content);
 
 		_quantization_tables.resize(0x10);
 
@@ -125,22 +127,30 @@ public:
 				
 				switch (marker)
 				{
-				/*case SOI:
-					i += process_start_of_image(_image_content);*/
+				case SOI:
+					/*i += process_start_of_image(_image_content);*/
+					break;
 				case SOF0:
 					process_start_of_frame_simple(_image_content);
+					break;
 				case SOF1:
 					process_start_of_frame_extended(_image_content);
+					break;
 				case SOF2:
 					process_start_of_frame_progressive(_image_content);
+					break;
 				case DHT:
 					process_huffman_table(_image_content);
+					break;
 				case DQT:
 					process_quantization_table(_image_content);
+					break;
 				case DRI:
 					process_restart_interval(_image_content);
+					break;
 				case SOS:
 					process_start_of_scan(_image_content);
+					break;
 				case RST0:
 				case RST1:
 				case RST2:
@@ -151,6 +161,7 @@ public:
 				case RST7:
 					_image_content.BytesBack(1); // 1 is for understanding restart type
 					process_restart(_image_content); 
+					break;
 				case APP0:
 				case APP1:
 				case APP2:
@@ -161,9 +172,12 @@ public:
 				case APP7:
 					_image_content.BytesBack(1); // 1 is for understanding application type
 					process_application_specific(_image_content);
+					break;
 				case COM:
 					process_comment(_image_content);
-				//case EOI:
+					break;
+				case EOI:
+					break;
 				//	process_end_of_image(_image_content);
 				default:
 					throw std::runtime_error("Strange type of marker");

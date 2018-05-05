@@ -4,7 +4,7 @@
 #include<algorithm>
 
 typedef bool bit;
-typedef char byte;
+typedef unsigned char byte;
 
 class BitStream
 {

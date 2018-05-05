@@ -51,22 +51,23 @@ Jpeg::HuffmanTree::Node * Jpeg::HuffmanTree::GetRoot()
 }
 
 
-bool Jpeg::check_for_image_correctness(const std::vector<unsigned char>& image_content_)
+bool Jpeg::check_for_image_correctness(InputBitStream& image_content_)
 {
-	if (image_content_.size() < 4) // TODO: understand, how much can be minimal size of picture
-	{
-		throw std::exception("Too small size of picture");
-	}
-	if (image_content_[0] * 0x100 + image_content_[1] != 0xFFD8)
-	{
-		throw std::exception("This is not JPEG file, start bytes are note matching");
-	}
-	if (image_content_[image_content_.size() - 2] * 0x100 + image_content_[image_content_.size() - 1] != 0xFFD9)
-	{
-		throw std::exception("This is not JPEG file, end bytes are note matching");
-	}
-	// TODO: add another checks
-	return true;
+	throw std::exception("Not implemented yet");
+	//if (image_content_.size() < 4) // todo: understand, how much can be minimal size of picture
+	//{
+	//	throw std::exception("too small size of picture");
+	//}
+	//if (image_content_[0] * 0x100 + image_content_[1] != 0xffd8)
+	//{
+	//	throw std::exception("this is not jpeg file, start bytes are note matching");
+	//}
+	//if (image_content_[image_content_.size() - 2] * 0x100 + image_content_[image_content_.size() - 1] != 0xffd9)
+	//{
+	//	throw std::exception("this is not jpeg file, end bytes are note matching");
+	//}
+	//// todo: add another checks
+	//return true;
 }
 
 void Jpeg::process_start_of_frame_simple(InputBitStream& image_content_)
@@ -96,7 +97,7 @@ void Jpeg::process_start_of_frame_simple(InputBitStream& image_content_)
 		image_content_ >> frame._id;
 		byte thinning;
 		image_content_ >> thinning;
-		frame._horizontal_thinning = thinning & 0xF0;
+		frame._horizontal_thinning = thinning >> 4;
 		frame._vertical_thinning = thinning & 0x0F;
 
 		image_content_ >> frame._id_of_quantization_table;
@@ -125,7 +126,7 @@ void Jpeg::process_huffman_table(InputBitStream& image_content_)
 
 	byte temp;
 	image_content_ >> temp;
-	byte coef_type = temp & 0xF0;
+	byte coef_type = temp >> 4;
 	byte table_id = temp & 0x0F;
 
 	std::vector<byte> huffman_codes_lenght(0x100);
@@ -142,7 +143,7 @@ void Jpeg::process_huffman_table(InputBitStream& image_content_)
 		image_content_ >> huffman_codes_values[i];
 	}
 
-	HuffmanTree* tree = new HuffmanTree(); 
+	HuffmanTree* tree = new HuffmanTree();
 	_huffman_trees[table_id] = tree;
 
 	for (int i = 0, count = 0; i < huffman_codes_lenght.size(); i++)
@@ -159,16 +160,18 @@ void Jpeg::process_quantization_table(InputBitStream& image_content_)
 {
 	byte size_1, size_2;
 	image_content_ >> size_1 >> size_2;
-	int size_of_table = size_1 * 0x100 +  size_2;
+	int size_of_table = size_1 * 0x100 + size_2;
 
 	byte temp;
 	image_content_ >> temp;
-	int value_in_2_bytes = temp & 0xF0;
-	int table_id = temp & 0x0F;
+	byte value_in_2_bytes = temp >> 4;
+	byte table_id = temp & 0x0F;
 
 	int size_of_matrix = (int)sqrt(size_of_table - 3);
 
 	_quantization_tables[table_id].resize(size_of_matrix, std::vector<int>(size_of_matrix));
+
+	this->calculating_zigzag_order_traversal(size_of_table, size_of_matrix);
 
 	for (int i = 3, t = 0; i < size_of_table; i += 1 + value_in_2_bytes, t++)
 	{
@@ -219,107 +222,118 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 
 	std::vector<std::vector<std::vector<byte>>> resulting_matrices;
 
-
-	for (int matrix_number = 0; matrix_number < 6; matrix_number++)
+	while (true)
 	{
-		int component_index = std::max(component_index - 4, 0);
-		HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator = 
-			new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs & 0xF0]);
-		std::vector<std::vector<byte>> matrix(_quantization_tables.size(), std::vector<byte>(_quantization_tables.size()));
-
-		int zigzag_order_counter = 0;
-
-		bit next;
-		// DC coef
-		while (image_content_ >> next)
+		byte end_byte[2];
+		image_content_ >> end_byte[0] >> end_byte[1];
+		if (end_byte[0] == 0xFF && end_byte[1] == markers::EOI)
 		{
-			huffman_tree_iterator->Step(next);
-			if (huffman_tree_iterator->IsCodeEnd())
-			{
-				byte bits_to_read = huffman_tree_iterator->GetValue();
-				// int number_of_0_to_add = huffman_tree_value & 0xF0;
-
-				if (bits_to_read)
-				{
-					bit first_bit = 0;
-					image_content_ >> first_bit;
-
-					byte real_value = first_bit;
-
-					for (int i = 1; i < bits_to_read; i++)
-					{
-						real_value *= 2;
-						bit next_bit;
-						image_content_ >> next_bit;
-						real_value += next_bit;
-					}
-
-					if (first_bit == 0)
-					{
-						real_value -= (1 << bits_to_read) - 1;
-					}
-					matrix[_zigzag_order_traversal_indices[zigzag_order_counter].first]
-						  [_zigzag_order_traversal_indices[zigzag_order_counter].second] = real_value;
-					zigzag_order_counter++;
-				}
-				break;
-			}
+			break;
 		}
-		// AC coefs
-		while (image_content_ >> next)
+		for (int matrix_number = 0; matrix_number < 6; matrix_number++)
 		{
-			huffman_tree_iterator->Step(next);
-			if (huffman_tree_iterator->IsCodeEnd())
+			int component_index = std::max(component_index - 4, 0);
+			HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator =
+				new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs >> 4]);
+			std::vector<std::vector<byte>> matrix(_quantization_tables.size(), std::vector<byte>(_quantization_tables.size()));
+
+			int zigzag_order_counter = 0;
+
+			bit next;
+			// DC coef
+			while (image_content_ >> next)
 			{
-				byte huffman_tree_value = huffman_tree_iterator->GetValue();
-				if (huffman_tree_value == 0)
+				huffman_tree_iterator->Step(next);
+				if (huffman_tree_iterator->IsCodeEnd())
 				{
+					byte bits_to_read = huffman_tree_iterator->GetValue();
+					// int number_of_0_to_add = huffman_tree_value >> 4;
+
+					if (bits_to_read)
+					{
+						bit first_bit = 0;
+						image_content_ >> first_bit;
+
+						byte real_value = first_bit;
+
+						for (int i = 1; i < bits_to_read; i++)
+						{
+							real_value *= 2;
+							bit next_bit;
+							image_content_ >> next_bit;
+							real_value += next_bit;
+						}
+
+						if (first_bit == 0)
+						{
+							real_value -= (1 << bits_to_read) - 1;
+						}
+						matrix[_zigzag_order_traversal_indices[zigzag_order_counter].first]
+							[_zigzag_order_traversal_indices[zigzag_order_counter].second] = real_value;
+						zigzag_order_counter++;
+					}
 					break;
 				}
-
-				byte number_of_0_to_add = huffman_tree_value & 0xF0;
-				zigzag_order_counter += number_of_0_to_add;
-
-				if (zigzag_order_counter >= _zigzag_order_traversal_indices.size())
+			}
+			// AC coefs
+			while (image_content_ >> next)
+			{
+				huffman_tree_iterator->Step(next);
+				if (huffman_tree_iterator->IsCodeEnd())
 				{
-					break;
-				}
-
-				byte bits_to_read = huffman_tree_value & 0x0F;
-
-				if (bits_to_read)
-				{
-					bit first_bit = 0;
-					image_content_ >> first_bit;
-
-					byte real_value = first_bit;
-
-					for (int i = 1; i < bits_to_read; i++)
+					byte huffman_tree_value = huffman_tree_iterator->GetValue();
+					if (huffman_tree_value == 0)
 					{
-						real_value *= 2;
-						bit next_bit;
-						image_content_ >> next_bit;
-						real_value += next_bit;
+						break;
 					}
 
-					if (first_bit == 0)
-					{
-						real_value -= (1 << bits_to_read) - 1;
-					}
-					matrix[_zigzag_order_traversal_indices[zigzag_order_counter].first]
-						[_zigzag_order_traversal_indices[zigzag_order_counter].second] = real_value;
-					zigzag_order_counter++;
+					byte number_of_0_to_add = huffman_tree_value >> 4;
+					zigzag_order_counter += number_of_0_to_add;
+
 					if (zigzag_order_counter >= _zigzag_order_traversal_indices.size())
 					{
 						break;
 					}
+
+					byte bits_to_read = huffman_tree_value & 0x0F;
+
+					if (bits_to_read)
+					{
+						bit first_bit = 0;
+						image_content_ >> first_bit;
+
+						byte real_value = first_bit;
+
+						for (int i = 1; i < bits_to_read; i++)
+						{
+							real_value *= 2;
+							bit next_bit;
+							image_content_ >> next_bit;
+							real_value += next_bit;
+						}
+
+						if (first_bit == 0)
+						{
+							real_value -= (1 << bits_to_read) - 1;
+						}
+						matrix[_zigzag_order_traversal_indices[zigzag_order_counter].first]
+							[_zigzag_order_traversal_indices[zigzag_order_counter].second] = real_value;
+						zigzag_order_counter++;
+						if (zigzag_order_counter >= _zigzag_order_traversal_indices.size())
+						{
+							break;
+						}
+					}
 				}
 			}
+
+			resulting_matrices.push_back(matrix);
+			// TODO
 		}
-		
-		resulting_matrices.push_back(matrix);
-		// TODO
 	}
+
+	// we have all matrices
+
 }
 
 void Jpeg::process_restart(InputBitStream& image_content_)
@@ -337,7 +351,7 @@ void Jpeg::process_comment(InputBitStream& image_content_)
 	image_content_ >> size_1 >> size_2;
 	int size_of_comment = size_1 * 0x100 + size_2;
 
-	for ( int i = 2 ; i < size_of_comment; i++ )
+	for (int i = 2; i < size_of_comment; i++)
 	{
 		byte temp;
 		image_content_ >> temp;
@@ -347,17 +361,16 @@ void Jpeg::process_comment(InputBitStream& image_content_)
 
 void Jpeg::calculating_zigzag_order_traversal(int size_of_table_, int size_of_matrix_)
 {
-	_zigzag_order_traversal_indices.resize(size_of_table_ - 3);
-
+	// _zigzag_order_traversal_indices.resize(size_of_table_ - 3);
 	// Calculating indices for zigzag order traversal
-	for (int i = 0, t = 1; i < 2 * size_of_matrix_ - 1; i++)
+	for (int i = 0; i < 2 * size_of_matrix_ - 1; i++)
 	{
 		if (i % 2 == 1)
 		{
 			int x = i < size_of_matrix_ ? 0 : i - size_of_matrix_ + 1;
 			int y = i < size_of_matrix_ ? i : size_of_matrix_ - 1;
 			while (x < size_of_matrix_ && y >= 0) {
-				_zigzag_order_traversal_indices[t++] = { x++, y-- };
+				_zigzag_order_traversal_indices.push_back({ x++, y-- });
 			}
 		}
 		else
@@ -365,7 +378,7 @@ void Jpeg::calculating_zigzag_order_traversal(int size_of_table_, int size_of_ma
 			int x = i < size_of_matrix_ ? i : size_of_matrix_ - 1;
 			int y = i < size_of_matrix_ ? 0 : i - size_of_matrix_ + 1;
 			while (x >= 0 && y < size_of_matrix_) {
-				_zigzag_order_traversal_indices[t++] = { x--, y++ };
+				_zigzag_order_traversal_indices.push_back({ x--, y++ });
 			}
 		}
 	}

@@ -24,12 +24,18 @@
     <ClCompile Include="BitStream.cpp">
       <Filter>Resource Files</Filter>
     </ClCompile>
+    <ClCompile Include="ImageFileBuffer.cpp">
+      <Filter>Resource Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Jpeg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="BitStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageFileBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
