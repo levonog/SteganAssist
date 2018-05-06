@@ -219,7 +219,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 	byte unknown[3];
 	image_content_ >> unknown[0] >> unknown[1] >> unknown[2];
 
-	std::vector<std::vector<std::vector<byte>>> resulting_matrices;
+	std::vector<std::vector<std::vector<int>>> resulting_matrices;
 
 	while (true)
 	{
@@ -229,12 +229,13 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 		{
 			break;
 		}
+		image_content_.BytesBack(2);
 		for (int matrix_number = 0; matrix_number < 6; matrix_number++)
 		{
 			int component_index = std::max(matrix_number - 4, 0);
 			HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator =
 				new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs >> 4][coef_type::DC]);
-			std::vector<std::vector<byte>> matrix(_quantization_tables.size(), std::vector<byte>(_quantization_tables.size()));
+			std::vector<std::vector<int>> matrix(_quantization_tables[0].size(), std::vector<int>(_quantization_tables[0].size()));
 
 			int zigzag_order_counter = 0;
 
@@ -253,7 +254,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 						bit first_bit = 0;
 						image_content_ >> first_bit;
 
-						byte real_value = first_bit;
+						int real_value = first_bit;
 
 						for (int i = 1; i < bits_to_read; i++)
 						{
@@ -303,7 +304,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 						bit first_bit = 0;
 						image_content_ >> first_bit;
 
-						byte real_value = first_bit;
+						int real_value = first_bit;
 
 						for (int i = 1; i < bits_to_read; i++)
 						{
@@ -325,6 +326,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 							break;
 						}
 					}
+					huffman_tree_iterator->Reset();
 				}
 			}
 
