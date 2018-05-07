@@ -232,7 +232,7 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 		image_content_.BytesBack(2);
 		for (int matrix_number = 0; matrix_number < 6; matrix_number++)
 		{
-			int component_index = std::max(matrix_number - 4, 0);
+			int component_index = std::max(matrix_number - 3, 0);
 			HuffmanTree::HuffmanTreeIterator* huffman_tree_iterator =
 				new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs >> 4][coef_type::DC]);
 			std::vector<std::vector<int>> matrix(_quantization_tables[0].size(), std::vector<int>(_quantization_tables[0].size()));
@@ -270,19 +270,22 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 						}
 						matrix[_zigzag_order_traversal_indices[zigzag_order_counter].first]
 							[_zigzag_order_traversal_indices[zigzag_order_counter].second] = real_value;
-						zigzag_order_counter++;
 					}
+					zigzag_order_counter++;
 					break;
 				}
 			}
 			huffman_tree_iterator = 
 				new HuffmanTree::HuffmanTreeIterator(_huffman_trees[components[component_index].id_for_DC_and_AC_coefs >> 4][coef_type::AC]);
 			// AC coefs
+			int number = 0;
 			while (image_content_ >> next)
 			{
+				number++;
 				huffman_tree_iterator->Step(next);
 				if (huffman_tree_iterator->IsCodeEnd())
 				{
+					number+=10000;
 					byte huffman_tree_value = huffman_tree_iterator->GetValue();
 					if (huffman_tree_value == 0)
 					{
