@@ -115,8 +115,8 @@ private:
 
 public:
 	// Jpeg(const std::vector<unsigned char>& image_content_)
-	Jpeg(const std::string& file_path)
-		: _image_content(ImageFileBuffer(file_path).Get())
+	Jpeg(const std::string& file_path_)
+		: _image_content(ImageFileBuffer(file_path_).Get())
 	{
 		// check_for_image_correctness(_image_content);
 
