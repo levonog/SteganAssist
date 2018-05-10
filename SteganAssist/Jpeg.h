@@ -4,8 +4,9 @@
 #include<algorithm>
 #include"BitStream.h"
 #include"ImageFileBuffer.h"
+#include"Image.h"
 
-class Jpeg
+class Jpeg : public Image
 {
 	class HuffmanTree
 	{
