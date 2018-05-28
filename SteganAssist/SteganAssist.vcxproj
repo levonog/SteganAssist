@@ -146,7 +146,9 @@
     <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Bmp.h" />
     <ClInclude Include="BitStream.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="ImageFileBuffer.h" />
     <ClInclude Include="Jpeg.h" />
   </ItemGroup>

@@ -220,8 +220,8 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 	image_content_ >> unknown[0] >> unknown[1] >> unknown[2];
 
 	std::vector<std::vector<std::vector<int>>> resulting_matrices;
-
-	while (true)
+	int number_of_matrices = 6;
+	while (number_of_matrices--)
 	{
 		byte end_byte[2];
 		image_content_ >> end_byte[0] >> end_byte[1];
@@ -337,7 +337,10 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 			// TODO
 		}
 	}
-
+	for (int i = 2; i < 5; i++)
+	{
+		resulting_matrices[i + 1][0][0] += resulting_matrices[i][0][0];
+	}
 	// we have all matrices
 
 }
