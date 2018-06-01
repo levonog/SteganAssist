@@ -54,12 +54,24 @@ class Jpeg : public Image
 	};
 
 private:
+	
 	enum markers
 	{
 		SOI = 0xD8, // Start of Image
-		SOF0 = 0xC0, // Start Of Frame
-		SOF1 = 0xC1, //Start Of Frame(extended DCT)
-		SOF2 = 0xC2, //Start Of Frame(progressive DCT)
+		SOF0 = 0xC0, // Baseline DCT
+		SOF1 = 0xC1, // Extended sequential DCT
+		SOF2 = 0xC2, // Progressive DCT
+		SOF3 = 0xC3, // Lossless (sequential)
+		SOF5 = 0xC5, // Differential sequential DCT
+		SOF6 = 0xC6, // Differential progressive DCT
+		SOF7 = 0xC7, // Differential lossless (sequential)
+		SOF9 = 0xC9, // Extended sequential DCT
+		SOF10 = 0xCA, // Progressive DCT
+		SOF11 = 0xCB, // Lossless (sequential)
+		SOF13 = 0xCD, // Differential sequential DCT
+		SOF14 = 0xCE, // Differential progressive DCT
+		SOF15 = 0xCF, // Differential lossless (sequential)
+
 		DHT = 0xC4, // Define Huffman Table(s)
 		DQT = 0xDB, // Define Quantization Table(s)
 		DRI = 0xDD, // Define Restart Interval
