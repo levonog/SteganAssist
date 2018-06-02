@@ -6,6 +6,7 @@
 #include"ImageFileBuffer.h"
 #include"Image.h"
 
+// [ISO/IEC 10918-1 : 1993(E)]
 class Jpeg : public Image
 {
 	class HuffmanTree
@@ -54,52 +55,86 @@ class Jpeg : public Image
 	};
 
 private:
-	
+	// Table B.1 – Marker code assignments
 	enum markers
 	{
-		SOI = 0xD8, // Start of Image
+		// Start Of Frame markers, non-differential, Huffman coding
 		SOF0 = 0xC0, // Baseline DCT
 		SOF1 = 0xC1, // Extended sequential DCT
 		SOF2 = 0xC2, // Progressive DCT
 		SOF3 = 0xC3, // Lossless (sequential)
+		
+		// Start Of Frame markers, differential, Huffman coding
 		SOF5 = 0xC5, // Differential sequential DCT
 		SOF6 = 0xC6, // Differential progressive DCT
 		SOF7 = 0xC7, // Differential lossless (sequential)
+
+		// Start Of Frame markers, non - differential, arithmetic coding
+		JPG = 0xC8, // Reserved for JPEG extensions
 		SOF9 = 0xC9, // Extended sequential DCT
 		SOF10 = 0xCA, // Progressive DCT
 		SOF11 = 0xCB, // Lossless (sequential)
+
+		// Start Of Frame markers, differential, arithmetic coding
 		SOF13 = 0xCD, // Differential sequential DCT
 		SOF14 = 0xCE, // Differential progressive DCT
 		SOF15 = 0xCF, // Differential lossless (sequential)
 
+		// Huffman table specification
 		DHT = 0xC4, // Define Huffman Table(s)
-		DQT = 0xDB, // Define Quantization Table(s)
-		DRI = 0xDD, // Define Restart Interval
-		SOS = 0xDA, // Start Of Scan
-		RST0 = 0xD0, // Restart. Inserted every
-		RST1 = 0xD1, // 			r macroblocks, where
-		RST2 = 0xD2, // 			r is the restart interval
-		RST3 = 0xD3, // 			set by a DRI marker. 
-		RST4 = 0xD4, // 			Not used if there was 
-		RST5 = 0xD5, // 			no DRI marker. The low
-		RST6 = 0xD6, // 			three bits of the marker
-		RST7 = 0xD7, // 			code cycle in value from 0 to 7.
-		APP0 = 0xE0, // Application-specific
-		APP1 = 0xE1, // Application-specific
-		APP2 = 0xE2, // Application-specific
-		APP3 = 0xE3, // Application-specific
-		APP4 = 0xE4, // Application-specific
-		APP5 = 0xE5, // Application-specific
-		APP6 = 0xE6, // Application-specific
-		APP7 = 0xE7, // Application-specific
+
+		// Arithmetic coding conditioning specification
+		DAC = 0xCC, // Define arithmetic coding conditioning(s)
+
+		// Restart interval termination
+		RST0 = 0xD0, // Restart with modulo 8 count “0”
+		RST1 = 0xD1, // Restart with modulo 8 count “1”
+		RST2 = 0xD2, // Restart with modulo 8 count “2”
+		RST3 = 0xD3, // Restart with modulo 8 count “3”
+		RST4 = 0xD4, // Restart with modulo 8 count “4”
+		RST5 = 0xD5, // Restart with modulo 8 count “5”
+		RST6 = 0xD6, // Restart with modulo 8 count “6”
+		RST7 = 0xD7, // Restart with modulo 8 count “7”
+
+		// Other markers
+		SOI = 0xD8, // Start of image
+		EOI = 0xD9, // End of image
+		SOS = 0xDA, // Start of scan
+		DQT = 0xDB, // Define quantization table(s)
+		DNL = 0xDC, // Define number of lines
+		DRI = 0xDD, // Define restart interval
+		DHP = 0xDE, // Define hierarchical progression
+		EXP = 0xDF, // Expand reference component(s)
+		APP0 = 0xE0, // Reserved for application segments
+		APP1 = 0xE1, // Reserved for application segments
+		APP2 = 0xE2, // Reserved for application segments
+		APP3 = 0xE3, // Reserved for application segments
+		APP4 = 0xE4, // Reserved for application segments
+		APP5 = 0xE5, // Reserved for application segments
+		APP6 = 0xE6, // Reserved for application segments
+		APP7 = 0xE7, // Reserved for application segments
+		JPG0 = 0xF0, // Reserved for JPEG extensions
+		JPG1 = 0xF1, // Reserved for JPEG extensions
+		JPG2 = 0xF2, // Reserved for JPEG extensions
+		JPG3 = 0xF3, // Reserved for JPEG extensions
+		JPG4 = 0xF4, // Reserved for JPEG extensions
+		JPG5 = 0xF5, // Reserved for JPEG extensions
+		JPG6 = 0xF6, // Reserved for JPEG extensions
+		JPG7 = 0xF7, // Reserved for JPEG extensions
 		COM = 0xFE, // Comment
-		EOI = 0xD9, // End Of Image
+
+		// Reserved markers
+		TEM = 0x01, // For temporary private use in arithmetic coding
 	};
+	
 	enum coef_type 
 	{ 
-		DC = 0, 
-		AC = 1 
+		// [3.1.35]
+		DC = 0,
+		// [3.1.2]
+		AC = 1,
 	};
+
 	bool check_for_image_correctness(InputBitStream& image_content_);
 	// void process_start_of_image(InputBitStream& image_content_);
 	void process_start_of_frame_simple(InputBitStream& image_content_);
