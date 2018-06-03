@@ -7,6 +7,9 @@
 #include"Image.h"
 
 // [ISO/IEC 10918-1 : 1993(E)]
+
+
+
 class Jpeg : public Image
 {
 	class HuffmanTree
@@ -87,14 +90,14 @@ private:
 		DAC = 0xCC, // Define arithmetic coding conditioning(s)
 
 		// Restart interval termination
-		RST0 = 0xD0, // Restart with modulo 8 count “0”
-		RST1 = 0xD1, // Restart with modulo 8 count “1”
-		RST2 = 0xD2, // Restart with modulo 8 count “2”
-		RST3 = 0xD3, // Restart with modulo 8 count “3”
-		RST4 = 0xD4, // Restart with modulo 8 count “4”
-		RST5 = 0xD5, // Restart with modulo 8 count “5”
-		RST6 = 0xD6, // Restart with modulo 8 count “6”
-		RST7 = 0xD7, // Restart with modulo 8 count “7”
+		RST0 = 0xD0, // Restart with modulo 8 count <0>
+		RST1 = 0xD1, // Restart with modulo 8 count <1>
+		RST2 = 0xD2, // Restart with modulo 8 count <2>
+		RST3 = 0xD3, // Restart with modulo 8 count <3>
+		RST4 = 0xD4, // Restart with modulo 8 count <4>
+		RST5 = 0xD5, // Restart with modulo 8 count <5>
+		RST6 = 0xD6, // Restart with modulo 8 count <6>
+		RST7 = 0xD7, // Restart with modulo 8 count <7>
 
 		// Other markers
 		SOI = 0xD8, // Start of image
@@ -137,6 +140,137 @@ private:
 
 	bool check_for_image_correctness(InputBitStream& image_content_);
 	// void process_start_of_image(InputBitStream& image_content_);
+
+	/**
+	 * \verbatim
+	 * [B.2.2]
+	 * Figure 1: frame header
+	 * _________________________________________________________
+	 * |    |   |   |   |   |   |   |   |   |    | Comp.-spec. |
+	 * |  SOFn  |  Lf   | P |   Y   |   X   | Nf | parameters  |
+	 * |____|___|___|___|___|___|___|___|___|____|_____________|
+	 *
+	 *
+	 * Figure 2: frame component-specification parameters
+	 * ____________________________________________________
+	 * |   |     |    |   |     |    |     |   |     |    |
+	 * | C | H|V | Tq | C | H|V | Tq | ... | C | H|V | Tq |
+	 * |___|_____|____|___|_____|____|_____|___|_____|____|
+	 * |______________|______________|     |______________|
+	 *         |              |                    |
+	 *         v              v                    v
+	 *         1              2                   Nf
+	 * \endverbatim
+	 *
+	 *
+	 *
+	 * * * * Description for Figure 1 * * * *
+	 *
+	 * SOFn: Start of frame marker:
+	 * > Marks the beginning of the frame parameters.
+	 * * The subscript n identifies whether the encoding process is baseline
+	 * * sequential, extended sequential, progressive, or lossless, as well
+	 * * as which entropy encoding procedure is used.
+	 * * SOF0: Baseline DCT
+	 * * SOF1: Extended sequential DCT, Huffman coding
+	 * * SOF2: Progressive DCT, Huffman coding
+	 * * SOF3: Lossless (sequential), Huffman coding
+	 * * SOF9: Extended sequential DCT, arithmetic coding
+	 * * SOF10: Progressive DCT, arithmetic coding
+	 * * SOF11: Lossless (sequential), arithmetic coding
+	 *
+	 * Lf: Frame header length:
+	 * > Specifies the length of the frame header shown in Figure 1.
+	 *
+	 * P: Sample precision:
+	 * > Specifies the precision in bits for the samples of the components in the frame.
+	 *
+	 * Y: Number of lines:
+	 * > Specifies the maximum number of lines in the source image.
+	 * * This shall be equal to the number of lines in the component with the maximum
+	 * * number of vertical samples. Value 0 indicates that the number of lines shall
+	 * * be defined by the DNL marker and parameters at the end of the first scan.
+	 *
+	 * X: Number of samples per line:
+	 * > Specifies the maximum number of samples per line in the source image.
+	 * * This shall be equal to the number of samples per line in the component with
+	 * * the maximum number of horizontal samples
+	 *
+	 * Nf: Number of image components in frame:
+	 * > Specifies the number of source image components in the frame.
+	 * * The value of Nf shall be equal to the number of sets of frame component
+	 * * specification parameters (Ci, Hi, Vi, and Tqi) present in the frame header.
+	 *
+	 *
+	 * * * * Description for Figure 2 * * * *
+	 *
+	 * Ci: Component identifier:
+	 * > Assigns a unique label to the ith component in the sequence of frame
+	 * > component specification parameters.
+	 * * These values shall be used in the scan headers to identify the components in
+	 * * the scan. The value of Ci shall be different from the values of C1 through Ci - 1.
+	 *
+	 * Hi: Horizontal sampling factor:
+	 * > Specifies the relationship between the component horizontal dimension and
+	 * > maximum image dimension X. Also specifies the number of horizontal data units
+	 * > of component Ci in each MCU, when more than one component is encoded in a scan.
+	 *
+	 * Vi: Vertical sampling factor:
+	 * > Specifies the relationship between the component vertical dimension and maximum
+	 * > image dimension Y. Also specifies the number of vertical data units of component
+	 * > Ci in each MCU, when more than one component is encoded in a scan.
+	 *
+	 * Tqi: Quantization table destination selector:
+	 * > Specifies one of four possible quantization table destinations from which the
+	 * > quantization table to use for dequantization of DCT coefficients of component Ci
+	 * > is retrieved. If the decoding process uses the dequantization procedure, this table
+	 * > shall have been installed in this destination by the time the decoder is ready
+	 * > to decode the scans containing component Ci. The destination shall not be respecified,
+	 * > or its contents changed, until all scans containing Ci have been completed.
+	 *
+	 * \verbatim
+	 * Figure 1: frame header parameter sizes and values
+	 * _____________________________________________________________________________
+	 * |           |            |                                                  |
+	 * |           |            |                      Values                      |
+	 * |           |            |__________________________________________________|
+	 * |           |            |                     |                 |          |
+	 * | Parameter | Size(bits) |    Sequential DCT   |                 |          |
+	 * |           |            |_____________________|                 |          |
+	 * |           |            |          |          | Progressive DCT | Lossless |
+	 * |           |            | Baseline | Extended |                 |          |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |                                                  |
+	 * |    Lf     |     16     |                   8 + 3 * Nf                     |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |          |          |                 |          |
+	 * |     P     |      8     |     8    |   8, 12  |      8, 12      |   2-16   |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |                                                  |
+	 * |     Y     |     16     |                     0-65535                      |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |                                                  |
+	 * |     X     |     16     |                     1-65535                      |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |          |          |                 |          |
+	 * |    Nf     |      8     |  1-255   |  1-255   |       1-4       |  1-255   |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |                                                  |
+	 * |    Ci     |      8     |                      0-255                       |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |                                                  |
+	 * |    Hi     |      4     |                       1-4                        |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |                                                  |
+	 * |    Vi     |      4     |                       1-4                        |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |          |          |                 |          |
+	 * |    Tqi    |      8     |   0-3    |   0-3    |       0-3       |    0     |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * \endverbatim
+	 *
+	 */
+
 	void process_start_of_frame_simple(InputBitStream& image_content_);
 	void process_start_of_frame_extended(InputBitStream& image_content_);
 	void process_start_of_frame_progressive(InputBitStream& image_content_);
