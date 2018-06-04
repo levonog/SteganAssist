@@ -143,7 +143,7 @@ private:
 
 	/**
 	 * \verbatim
-	 * [B.2.2]
+	 * [B.2.2] Frame header syntax
 	 * Figure 1: frame header
 	 * _________________________________________________________
 	 * |    |   |   |   |   |   |   |   |   |    | Comp.-spec. |
@@ -229,7 +229,7 @@ private:
 	 * > or its contents changed, until all scans containing Ci have been completed.
 	 *
 	 * \verbatim
-	 * Figure 1: frame header parameter sizes and values
+	 * Figure 3: frame header parameter sizes and values
 	 * _____________________________________________________________________________
 	 * |           |            |                                                  |
 	 * |           |            |                      Values                      |
@@ -270,13 +270,166 @@ private:
 	 * \endverbatim
 	 *
 	 */
-
 	void process_start_of_frame_simple(InputBitStream& image_content_);
 	void process_start_of_frame_extended(InputBitStream& image_content_);
 	void process_start_of_frame_progressive(InputBitStream& image_content_);
 	void process_huffman_table(InputBitStream& image_content_);
 	void process_quantization_table(InputBitStream& image_content_);
 	void process_restart_interval(InputBitStream& image_content_);
+
+	/**
+	 * \verbatim
+	 * [B.2.3] Scan header syntax
+	 * Figure 1: scan header
+	 * ___________________________________________________________
+	 * |    |    |    |    |    |  Comp.-spec. |    |    |       |
+	 * |   SOS   |    Ls   | Ns |  parameters  | Ss | Se | Ah|Al |
+	 * |____|____|____|____|____|______________|____|____|_______|
+	 *
+	 * Figure 2: scan component-specification parameters
+	 * ______________________________________________
+	 * |    |       |    |       |     |    |       |
+	 * | Cs | Td|Ta | Cs | Td|Ta | ... | Cs | Td|Ta |
+	 * |____|_______|____|_______|_____|____|_______|
+	 * |____________|____________|     |____________|
+	 *        |            |                  |
+	 *        v            v                  v
+	 *        1            2                  Ns
+	 * \endverbatim
+	 *
+	 * * * * Description for Figure 1 * * * *
+	 *
+	 * SOS: Start of scan marker:
+	 * > Marks the beginning of the scan parameters.
+	 *
+	 * Ls: Scan header length:
+	 * > Specifies the length of the scan header shown in Figure 1.
+	 *
+	 * Ns: Number of image components in scan:
+	 * > Specifies the number of source image components in the scan.
+	 * * The value of Ns shall be equal to the number of sets of scan component
+	 * * specification parameters (Csj, Tdj, and Taj) present in the scan header.
+	 *
+	 *
+	 * Ss: Start of spectral or predictor selection:
+	 * > In the DCT modes of operation, this parameter specifies the first DCT coefficient
+	 * > in each block in zig-zag order which shall be coded in the scan.
+	 * * This parameter shall be set to zero for the sequential DCT processes. In the
+	 * * lossless mode of operations this parameter is used to select the predictor.
+	 *
+	 * Se: End of spectral selection:
+	 * > Specifies the last DCT coefficient in each block in zig-zag order which shall be
+	 * > coded in the scan.
+	 * * This parameter shall be set to 63 for the sequential DCT processes. In the lossless
+	 * *  mode of operations this parameter has no meaning. It shall be set to zero.
+	 *
+	 * Ah: Successive approximation bit position high:
+	 * > This parameter specifies the point transform used in the preceding scan (i.e.
+	 * > successive approximation bit position low in the preceding scan) for the band of
+	 * > coefficients specified by Ss and Se.
+	 * * This parameter shall be set to zero for the first scan of each band of coefficients.
+	 * * In the lossless mode of operations this parameter has no meaning. It shall be set to
+	 * * zero.
+	 *
+	 * Al: Successive approximation bit position low or point transform:
+	 * > In the DCT modes of operation this parameter specifies the point transform, i.e.
+	 * > bit position low, used before coding the band of coefficients specified by Ss and Se.
+	 * * This parameter shall be set to zero for the sequential DCT processes. In the lossless
+	 * * mode of operations, this parameter specifies the point transform, Pt.
+	 *
+	 * * * * Description for Figure 2 * * * *
+	 *
+	 * Csj: Scan component selector:
+	 * > Selects which of the Nf image components specified in the frame parameters
+	 * > shall be the jth component in the scan.
+	 * * Each Csj shall match one of the Ci values specified in the frame header,
+	 * * and the ordering in the scan header shall follow the ordering in the frame
+	 * * header. If Ns > 1, the order of interleaved components in the MCU is Cs1
+	 * * first, Cs2 second, etc. If Ns > 1, the following restriction shall be placed
+	 * * on the image components contained in the scan:
+	 * * sum {j, 1, Ns} {Hj * Vj} <= 10
+	 * * where Hj and Vj are the horizontal and vertical sampling factors for scan
+	 * * component j. These sampling factors are specified in the frame header for
+	 * * component i, where i is the frame component specification index for which
+	 * * frame component identifier Ci matches scan component selector Csj.
+	 * * The value of Csj shall be different from the values of Cs1 to Csj – 1.
+	 * *
+	 * $ As an example, consider an image having 3 components with maximum dimensions
+	 * $ of 512 lines and 512 samples per line, and with the following sampling factors:
+	 * $ _________________________________
+	 * $ |             |        |        |
+	 * $ | Component 0 | H0 = 4 | V0 = 1 |
+	 * $ |_____________|________|________|
+	 * $ |             |        |        |
+	 * $ | Component 1 | H1 = 1 | V1 = 2 |
+	 * $ |_____________|________|________|
+	 * $ |             |        |        |
+	 * $ | Component 2 | H2 = 2 | V2 = 2 |
+	 * $ |_____________|________|________|
+	 * $
+	 * $ Then the summation of Hj * Vj is (4 * 1) + (1 * 2) + (2 * 2) = 10.
+	 *
+	 * Tdj: DC entropy coding table destination selector:
+	 * > Specifies one of four possible DC entropy coding table destinations from which
+	 * > the entropy table needed for decoding of the DC coefficients of component Csj
+	 * > is retrieved. The DC entropy table shall have been installed in this destination
+	 * > by the time the decoder is ready to decode the current scan. This parameter
+	 * > specifies the entropy coding table destination for the lossless processes.
+	 *
+	 * Taj: AC entropy coding table destination selector:
+	 * > Specifies one of four possible AC entropy coding table destinations from which
+	 * > the entropy table needed for decoding of the AC coefficients of component Csj
+	 * > is retrieved. The AC entropy table selected shall have been installed in this
+	 * > destination by the time the decoder is ready to decode the current scan. This
+	 * > parameter is zero for the lossless processes.
+	 *
+	 *
+	 * \verbatim
+	 * Figure 3: scan header parameter size and values
+	 * _____________________________________________________________________________
+	 * |           |            |                                                  |
+	 * |           |            |                      Values                      |
+	 * |           |            |__________________________________________________|
+	 * |           |            |                     |                 |          |
+	 * | Parameter | Size(bits) |    Sequential DCT   |                 |          |
+	 * |           |            |_____________________|                 |          |
+	 * |           |            |          |          | Progressive DCT | Lossless |
+	 * |           |            | Baseline | Extended |                 |          |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |                                                  |
+	 * |    Ls     |     16     |                   6 + 2 * Ns                     |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |                                                  |
+	 * |    Ns     |      8     |                       1-4                        |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |                                                  |
+	 * |    Csj    |      8     |                     0-255(a)                     |
+	 * |___________|____________|__________________________________________________|
+	 * |           |            |          |          |                 |          |
+	 * |    Tdj    |      4     |    0-1   |    0-3   |       0-3       |    0-3   |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |          |          |                 |          |
+	 * |    Taj    |      4     |    0-1   |    0-3   |       0-3       |     0    |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |          |          |                 |          |
+	 * |    Ss     |      8     |     0    |     0    |      0-63       |  1-7(b)  |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |          |          |                 |          |
+	 * |    Se     |      8     |    63    |    63    |     Ss-63(c)    |     0    |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |          |          |                 |          |
+	 * |    Ah     |      4     |     0    |     0    |       0-13      |     0    |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 * |           |            |          |          |                 |          |
+	 * |    Al     |      4     |     0    |     0    |       0-13      |    0-15  |
+	 * |___________|____________|__________|__________|_________________|__________|
+	 *
+	 * (a) Csj shall be a member of the set of Ci specified in the frame header.
+	 * (b) 0 for lossless differential frames in the hierarchical mode (see B.3).
+	 * (c) 0 if Ss equals zero.
+	 * \endverbatim
+	 *
+	 */
 	void process_start_of_scan(InputBitStream& image_content_);
 	void process_restart(InputBitStream& image_content_);
 	void process_application_specific(InputBitStream& image_content_);
