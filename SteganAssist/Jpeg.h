@@ -223,10 +223,11 @@ private:
 	 * Tqi: Quantization table destination selector:
 	 * > Specifies one of four possible quantization table destinations from which the
 	 * > quantization table to use for dequantization of DCT coefficients of component Ci
-	 * > is retrieved. If the decoding process uses the dequantization procedure, this table
-	 * > shall have been installed in this destination by the time the decoder is ready
-	 * > to decode the scans containing component Ci. The destination shall not be respecified,
-	 * > or its contents changed, until all scans containing Ci have been completed.
+	 * > is retrieved. 
+	 * * If the decoding process uses the dequantization procedure, this table
+	 * * shall have been installed in this destination by the time the decoder is ready
+	 * * to decode the scans containing component Ci. The destination shall not be respecified,
+	 * * or its contents changed, until all scans containing Ci have been completed.
 	 *
 	 * \verbatim
 	 * Figure 3: frame header parameter sizes and values
@@ -310,7 +311,6 @@ private:
 	 * * The value of Ns shall be equal to the number of sets of scan component
 	 * * specification parameters (Csj, Tdj, and Taj) present in the scan header.
 	 *
-	 *
 	 * Ss: Start of spectral or predictor selection:
 	 * > In the DCT modes of operation, this parameter specifies the first DCT coefficient
 	 * > in each block in zig-zag order which shall be coded in the scan.
@@ -321,7 +321,7 @@ private:
 	 * > Specifies the last DCT coefficient in each block in zig-zag order which shall be
 	 * > coded in the scan.
 	 * * This parameter shall be set to 63 for the sequential DCT processes. In the lossless
-	 * *  mode of operations this parameter has no meaning. It shall be set to zero.
+	 * * mode of operations this parameter has no meaning. It shall be set to zero.
 	 *
 	 * Ah: Successive approximation bit position high:
 	 * > This parameter specifies the point transform used in the preceding scan (i.e.
@@ -450,6 +450,89 @@ private:
 
 public:
 	// Jpeg(const std::vector<unsigned char>& image_content_)
+	/**
+	* \verbatim
+	* [B.2.1] High-level syntax
+	* Figure 1: compressed image data
+	* ____________________________________
+	* |    |    |              |    |    |
+	* |   SOS   |     Frame    |   EOI   |
+	* |____|____|______________|____|____|
+	*
+	* Figure 2: frame
+	* ___________________________________________________________________________________
+	* |                |              |       |               |         |     |         |
+	* | [Tables/misc.] | Frame header | Scan1 | [DNL segment] | [Scan2] | ... | [ScanN] |
+	* |________________|______________|_______|_______________|_________|_____|_________|
+	*
+	*
+	* Figure 3: scan
+	* _____________________________________________________________________________________________
+	* |                |             |       |    |    |      |     |        |    |     |         |
+	* | [Tables/misc.] | Scan header | [ECS0 |   RST0  | ECS1 | ... | ECSn-1 |  RSTn-1] |   ECSn  |
+	* |________________|_____________|_______|____|____|______|_____|________|____|_____|_________|
+	*
+	*
+	* Figure 4.1: entropy-coded segment (ECS) 0
+	* ________________________________________
+	* |         |         |       |          |
+	* | <MCU 1> | <MCU 1> |  ···  | <MCU Ri> |
+	* |_________|_________|_______|__________|
+	*
+	* Figure 4.2: entropy-coded segment (ECS) N
+	* ____________________________________________
+	* |         |           |       |            |
+	* | <MCU k> | <MCU k+1> |  ···  | <MCU last> |
+	* |_________|___________|_______|____________|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 3 * * * *
+	*
+	* SOI: Start of image marker:
+	* > Marks the start of a compressed image represented in the interchange format or abbreviated format.
+	*
+	* EOI: End of image marker:
+	* > Marks the end of a compressed image represented in the interchange format or abbreviated format.
+	*
+	* RSTm: Restart marker:
+	* > A conditional marker which is placed between entropy-coded segments only if restart is enabled.
+	* * There are 8 unique restart markers (m = 0 - 7) which repeat in sequence from 0 to 7, starting with
+	* * zero for each scan, to provide a modulo 8 restart interval count.
+	*
+	* * * * Description for Figure 4 and 5 * * * *
+	*
+	* These Figures specifies that each entropy-coded segment is comprised of a sequence of entropycoded
+	* MCUs. If restart is enabled and the restart interval is defined to be Ri, each entropy-coded segment
+	* except the last one shall contain Ri MCUs. The last one shall contain whatever number of MCUs completes
+	* the scan.
+	*
+	*
+	*
+	* [B.2.4]
+	* Figure 5: Tables or miscellaneous marker segment
+	*
+	* __________________________________________
+	* |          |          |       |          |
+	* |  Marker  |  Marker  |       |  Marker  |
+	* | segment1 | segment2 |  ···  | segmentn |
+	* |__________|__________|_______|__________|
+	*
+	*
+	*                                              __
+	*     Quantization table-specification          |
+	*                    or                         |
+	*        Huffman table-specification            |
+	*                    or                         |
+	* Arithmetic conditioning table-specification   |
+	*                    or                         |==> Marker segment
+	*        Restart interval definition            |
+	*                    or                         |
+	*                  Comment                      |
+	*                    or                         |
+	*            Application data                  _|
+	*
+	*/
 	Jpeg(const std::string& file_path_)
 		: _image_content(ImageFileBuffer(file_path_).Get())
 	{
