@@ -7,9 +7,6 @@
 #include"Image.h"
 
 // [ISO/IEC 10918-1 : 1993(E)]
-
-
-
 class Jpeg : public Image
 {
 	class HuffmanTree
@@ -72,7 +69,7 @@ private:
 		SOF6 = 0xC6, // Differential progressive DCT
 		SOF7 = 0xC7, // Differential lossless (sequential)
 
-		// Start Of Frame markers, non - differential, arithmetic coding
+		// Start Of Frame markers, non-differential, arithmetic coding
 		JPG = 0xC8, // Reserved for JPEG extensions
 		SOF9 = 0xC9, // Extended sequential DCT
 		SOF10 = 0xCA, // Progressive DCT
@@ -274,7 +271,145 @@ private:
 	void process_start_of_frame_simple(InputBitStream& image_content_);
 	void process_start_of_frame_extended(InputBitStream& image_content_);
 	void process_start_of_frame_progressive(InputBitStream& image_content_);
+	
+	/**
+	* \verbatim
+	* [B.2.4.2] Huffman table-specification syntax
+	*
+	* Figure 1: define Huffman table segment
+	* ___________________________________________________________________________
+	* |    |    |    |    |       |      |      |       |       | Symbol-length |
+	* |   DHT   |    Lh   | Tc|Th |  Q1  |  Q2  |  ...  |  Q16  |  assignment   |
+	* |____|____|____|____|_______|______|______|_______|_______|_______________|
+	*
+	* Figure 2: symbol-length assignment parameters
+	* _______________________________________________________________________________________________________
+	* |      |      |       |       |      |      |       |       |       |       |       |       |         |
+	* | v1,1 | v1,2 |  ...  | v1,L1 | v2,1 | v2,2 |  ...  | v2,L2 |  ...  | v16,1 | v16,2 |  ...  | v16,L16 |
+	* |______|______|_______|_______|______|______|_______|_______|_______|_______|_______|_______|_________|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* DHT: Define Huffman table marker:
+	* > Marks the beginning of Huffman table definition parameters.
+	*
+	* Lh: Huffman table definition length:
+	* > Specifies the length of all Huffman table parameters shown in Figure 1.
+	*
+	* Tc: Table class:
+	* > 0 = DC table or lossless table, 1 = AC table.
+	*
+	* Th: Huffman table destination identifier:
+	* > Specifies one of four possible destinations at the decoder into which
+	* > the Huffman table shall be installed.
+	*
+	* Li: Number of Huffman codes of length i:
+	* > Specifies the number of Huffman codes for each of the 16 possible lengths
+	* > allowed by this Specification. Li’s are the elements of the list BITS.
+	*
+	* Vi,j: Value associated with each Huffman code:
+	* > Specifies, for each i, the value associated with each Huffman code of
+	* > length i. The meaning of each value is determined by the Huffman coding
+	* > model.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                                   |
+	* |    Lh     |     16     |      2 + sum{t, 1, n}(17 + sum{i, 1, 16}(Li))     |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                       |           |
+	* |    Tc     |      4     |                   0,1                 |     0     |
+	* |___________|____________|_______________________________________|___________|
+	* |           |            |          |                                        |
+	* |    Th     |      4     |    0,1   |                    0-3                 |
+	* |___________|____________|__________|________________________________________|
+	* |           |            |                                                   |
+	* |    Li     |      8     |                        1-255                      |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                                   |
+	* |   Vi,j    |      8     |                        1-255                      |
+	* |___________|____________|___________________________________________________|
+	*
+	* \endverbatim
+	*
+	*/
 	void process_huffman_table(InputBitStream& image_content_);
+
+	/**
+	* \verbatim
+	* [B.2.4.1] Quantization table-specification syntax
+	*
+	* Figure 1: quantization table syntax
+	* __________________________________________________________
+	* |    |    |    |    |       |      |      |       |       |
+	* |   DQT   |    Lq   | Pq|Tq |  Q0  |  Q1  |  ...  |  Q63  |
+	* |____|____|____|____|_______|______|______|_______|_______|
+	*                     |_____________________________________|
+	*                                         |
+	*                                         v
+	*                              Multiple(t = 1, ..., n)
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* DQT: Define quantization table marker:
+	* > Marks the beginning of quantization table-specification parameters.
+	*
+	* Lq: Quantization table definition length:
+	* > Specifies the length of all quantization table parameters shown in Figure 1.
+	*
+	* Pq: Quantization table element precision:
+	* > Specifies the precision of the Qk values.
+	* * Value 0 indicates 8-bit Qk values; value 1 indicates 16-bit Qk values.
+	* * Pq shall be zero for 8 bit sample precision P (see B.2.2).
+	*
+	* Tq: Quantization table destination identifier:
+	* > Specifies one of four possible destinations at the decoder into which the
+	* > quantization table shall be installed.
+	*
+	* Qk: Quantization table element:
+	* > Specifies the kth element out of 64 elements, where k is the index in the zigzag
+	* > ordering of the DCT coefficients.
+	* * The quantization elements shall be specified in zig-zag scan order.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                       |           |
+	* |    Lq     |     16     |    2 + sum{t, 1, n}(65 + 64*Pq(t))    | Undefined |
+	* |___________|____________|_______________________________________|___________|
+	* |           |            |          |          |                 |           |
+	* |    Pq     |      4     |     0    |   0, 1   |      0, 1       | Undefined |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                       |           |
+	* |    Tq     |      4     |                   0-3                 | Undefined |
+	* |___________|____________|_______________________________________|___________|
+	* |           |            |                                       |           |
+	* |    Qk     |    8, 16   |              1-255, 1-65535           | Undefined |
+	* |___________|____________|_______________________________________|___________|
+	*
+	* \endverbatim
+	*
+	*/
 	void process_quantization_table(InputBitStream& image_content_);
 	void process_restart_interval(InputBitStream& image_content_);
 
