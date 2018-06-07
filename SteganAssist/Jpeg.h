@@ -411,6 +411,73 @@ private:
 	*
 	*/
 	void process_quantization_table(InputBitStream& image_content_);
+
+	/**
+	* \verbatim
+	* [B.2.4.3] Arithmetic conditioning table-specification syntax
+	*
+	* Figure 1: define arithmetic conditioning segment
+	* ____________________________________
+	* |    |    |    |    |       |      |
+	* |   DAC   |    La   | Tc|Tb |  Cs  |
+	* |____|____|____|____|_______|______|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* DAC: Define arithmetic coding conditioning marker:
+	* > Marks the beginning of the definition of arithmetic coding conditioning
+	* > parameters.
+	*
+	* La: Arithmetic coding conditioning definition length:
+	* > Specifies the length of all arithmetic coding conditioning parameters shown
+	* > in Figure 1.
+	*
+	* Tc: Table class:
+	* > 0 = DC table or lossless table, 1 = AC table.
+	*
+	* Tb: Arithmetic coding conditioning table destination identifier:
+	* > Specifies one of four possible destinations at the decoder into which the
+	* > arithmetic coding conditioning table shall be installed.
+	*
+	* Cs: Conditioning table value:
+	* > Value in either the AC or the DC (and lossless) conditioning table.
+	* * A single value of Cs shall follow each value of Tb. For AC conditioning
+	* * tables Tc shall be one and Cs shall contain a value of Kx in the range
+	* * 1 <= Kx <= 63. For DC (and lossless) conditioning tables Tc shall be zero
+	* * and Cs shall contain two 4-bit parameters, U and L. U and L shall be in the
+	* * range 0 <= L <= U <= 15 and the value of Cs shall be L + 16 * U.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |          |                                        |
+	* |    La     |     16     |   Undef  |               2 + 2 * n                |
+	* |___________|____________|__________|________________________________________|
+	* |           |            |          |                            |           |
+	* |    Tc     |      4     |   Undef  |              0,1           |     0     |
+	* |___________|____________|__________|____________________________|___________|
+	* |           |            |          |                                        |
+	* |    Tb     |      4     |   Undef  |                    0-3                 |
+	* |___________|____________|__________|________________________________________|
+	* |           |            |          |                            |           |
+	* |    Cs     |      8     |   Undef  |   0-255(Tc=0), 1-63(Tc=1)  |   1-255   |
+	* |___________|____________|__________|____________________________|___________|
+	*
+	* \endverbatim
+	*
+	*/
+	void process_arithmetic_table(InputBitStream& image_content_);
+
 	void process_restart_interval(InputBitStream& image_content_);
 
 	/**
@@ -566,8 +633,54 @@ private:
 	 *
 	 */
 	void process_start_of_scan(InputBitStream& image_content_);
-	void process_restart(InputBitStream& image_content_);
+
+	/**
+	* \verbatim
+	* [B.2.4.4] Restart interval definition syntax
+	*
+	* Figure 1: define restart interval segment
+	* _______________________________
+	* |    |    |    |    |    |    |
+	* |   DRI   |    Lr   |    Ri   |
+	* |____|____|____|____|____|____|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* DRI: Define restart interval marker:
+	* > Marks the beginning of the parameters which define the restart interval.
+	*
+	* Lr: Define restart interval segment length:
+	* > Specifies the length of the parameters in the DRI segment shown in Figure 1.
+	*
+	* Ri: Restart interval:
+	* > Specifies the number of MCU in the restart interval.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                                   |
+	* |    Lr     |     16     |                        4                          |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                       |           |
+	* |    Ri     |     16     |                 0-65535               |  n * MCUR |
+	* |___________|____________|_______________________________________|___________|
+	*
+	* \endverbatim
+	*
+	*/
+	void process_restart_interval(InputBitStream& image_content_);
 	void process_application_specific(InputBitStream& image_content_);
+
 	void process_comment(InputBitStream& image_content_);
 	void calculating_zigzag_order_traversal(int size_of_table_, int size_of_matrix_);
 	// void process_end_of_image(InputBitStream& image_content_);
@@ -720,7 +833,7 @@ public:
 			case RST6:
 			case RST7:
 				_image_content.BytesBack(1); // 1 is for understanding restart type
-				process_restart(_image_content); 
+				process_restart_interval(_image_content); 
 				break;
 			case APP0:
 			case APP1:
