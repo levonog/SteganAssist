@@ -268,9 +268,9 @@ private:
 	 * \endverbatim
 	 *
 	 */
-	void process_start_of_frame_simple(InputBitStream& image_content_);
-	void process_start_of_frame_extended(InputBitStream& image_content_);
-	void process_start_of_frame_progressive(InputBitStream& image_content_);
+	void process_start_of_frame_baseline_DCT(InputBitStream& image_content_);
+	void process_start_of_frame_extended_sequential_DCT(InputBitStream& image_content_);
+	void process_start_of_frame_progressive_DCT(InputBitStream& image_content_);
 	
 	/**
 	* \verbatim
@@ -478,8 +478,6 @@ private:
 	*/
 	void process_arithmetic_table(InputBitStream& image_content_);
 
-	void process_restart_interval(InputBitStream& image_content_);
-
 	/**
 	 * \verbatim
 	 * [B.2.3] Scan header syntax
@@ -679,9 +677,149 @@ private:
 	*
 	*/
 	void process_restart_interval(InputBitStream& image_content_);
+
+	/**
+	* \verbatim
+	* [B.2.4.6] Application data syntax
+	*
+	* Figure 1: application data segment
+	* _______________________________________________
+	* |    |    |    |    |                         |
+	* |   APPn  |    Lp   |  Ap1, Ap2, ..., ApLp-2  |
+	* |____|____|____|____|_________________________|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* APPn: Application data marker:
+	* > Marks the beginning of an application data segment.
+	*
+	* Lp: Application data segment length:
+	* > Specifies the length of the application data segment shown in Figure 1.
+	*
+	* Api: Application data byte:
+	* > The interpretation is left to the application.
+	*
+	* The APPn (Application) segments are reserved for application use.
+	* Since these segments may be defined differently for different applications,
+	* they should be removed when the data are exchanged between application environments.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                                   |
+	* |    Lp     |     16     |                      2-65535                      |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                                   |
+	* |    Api    |      8     |                       0-255                       |
+	* |___________|____________|___________________________________________________|
+	*
+	* \endverbatim
+	*
+	*/
 	void process_application_specific(InputBitStream& image_content_);
 
+	/**
+	* \verbatim
+	* [B.2.4.5] Comment syntax
+	*
+	* Figure 1: comment segment
+	* _______________________________________________
+	* |    |    |    |    |                         |
+	* |   COM   |    Lc   |  Cm1, Cm2, ..., CmLc-2  |
+	* |____|____|____|____|_________________________|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* COM: Comment marker:
+	* > Marks the beginning of a comment.
+	*
+	* Lc: Comment segment length:
+	* > Specifies the length of the comment segment shown in Figure 1.
+	*
+	* Cmi: Comment byte:
+	* The interpretation is left to the application.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                                   |
+	* |    Lc     |     16     |                      2-65535                      |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                                   |
+	* |    Cmi    |      8     |                       0-255                       |
+	* |___________|____________|___________________________________________________|
+	*
+	* \endverbatim
+	*
+	*/
 	void process_comment(InputBitStream& image_content_);
+
+	/**
+	* \verbatim
+	* [B.2.5] Define number of lines syntax
+	*
+	* Figure 1: define number of lines segment
+	* ___________________________
+	* |    |   |    |    |      |
+	* |   DNL  |    Ld   |  NL  |
+	* |____|___|____|____|______|
+	*
+	* \endverbatim
+	*
+	* * * * Description for Figure 1 * * * *
+	*
+	* DNL: Define number of lines marker:
+	* Marks the beginning of the define number of lines segment.
+	*
+	* Ld: Define number of lines segment length:
+	* Specifies the length of the define number of lines segment shown in Figure 1.
+	*
+	* NL: Number of lines:
+	* Specifies the number of lines in the frame.
+	*
+	* \verbatim
+	* ______________________________________________________________________________
+	* |           |            |                                                   |
+	* |           |            |                      Values                       |
+	* |           |            |___________________________________________________|
+	* |           |            |                     |                 |           |
+	* | Parameter | Size(bits) |    Sequential DCT   |                 |           |
+	* |           |            |_____________________|                 |           |
+	* |           |            |          |          | Progressive DCT |  Lossless |
+	* |           |            | Baseline | Extended |                 |           |
+	* |___________|____________|__________|__________|_________________|___________|
+	* |           |            |                                                   |
+	* |     Lp    |     16     |                         4                         |
+	* |___________|____________|___________________________________________________|
+	* |           |            |                                                   |
+	* |     NL    |     16     |                      0-65535                      |
+	* |___________|____________|___________________________________________________|
+	*
+	* \endverbatim
+	*
+	*/
+	void process_number_of_lines(InputBitStream& image_content_);
+
 	void calculating_zigzag_order_traversal(int size_of_table_, int size_of_matrix_);
 	// void process_end_of_image(InputBitStream& image_content_);
 
@@ -804,13 +942,13 @@ public:
 				/*i += process_start_of_image(_image_content);*/
 				break;
 			case SOF0:
-				process_start_of_frame_simple(_image_content);
+				process_start_of_frame_baseline_DCT(_image_content);
 				break;
 			case SOF1:
-				process_start_of_frame_extended(_image_content);
+				process_start_of_frame_extended_sequential_DCT(_image_content);
 				break;
 			case SOF2:
-				process_start_of_frame_progressive(_image_content);
+				process_start_of_frame_progressive_DCT(_image_content);
 				break;
 			case DHT:
 				process_huffman_table(_image_content);
@@ -853,7 +991,7 @@ public:
 				break;
 			//	process_end_of_image(_image_content);
 			default:
-				throw std::runtime_error("Strange type of marker");
+				throw std::runtime_error("Found not supported yet marker: " + std::to_string(EOI));
 			}
 		}
 
