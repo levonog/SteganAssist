@@ -835,7 +835,6 @@ private:
 
 
 public:
-	// Jpeg(const std::vector<unsigned char>& image_content_)
 	/**
 	* \verbatim
 	* [B.2.1] High-level syntax
