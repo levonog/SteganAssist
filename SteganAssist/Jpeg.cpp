@@ -32,22 +32,45 @@ bool Jpeg::HuffmanTree::add_element(Node*& current_node, int lenght, int value)
 	}
 	return false;
 }
-
 Jpeg::HuffmanTree::HuffmanTree()
 	: _root(new Node())
 	, _state(_root)
 {
 }
-
-
 void Jpeg::HuffmanTree::AddElement(int lenght_, int value_)
 {
 	add_element(_root, lenght_, value_);
 }
-
 Jpeg::HuffmanTree::Node * Jpeg::HuffmanTree::GetRoot()
 {
 	return _root;
+}
+
+Jpeg::HuffmanTree::HuffmanTreeIterator::HuffmanTreeIterator(HuffmanTree * tree_)
+	: _state(tree_->GetRoot())
+	, _root(tree_->GetRoot())
+{
+}
+Jpeg::HuffmanTree::HuffmanTreeIterator * Jpeg::HuffmanTree::HuffmanTreeIterator::Step(int way_)
+{
+	_state = (way_ == 0 ? _state->_left : _state->_right);
+	if (_state == nullptr)
+	{
+		throw std::exception("Something goes wrong");
+	}
+	return this;
+}
+bool Jpeg::HuffmanTree::HuffmanTreeIterator::IsCodeEnd()
+{
+	return _state->_code_end;
+}
+byte Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
+{
+	return _state->_value;
+}
+void Jpeg::HuffmanTree::HuffmanTreeIterator::Reset()
+{
+	_state = _root;
 }
 
 
@@ -70,7 +93,7 @@ bool Jpeg::check_for_image_correctness(InputBitStream& image_content_)
 	//return true;
 }
 
-void Jpeg::process_start_of_frame_simple(InputBitStream& image_content_)
+void Jpeg::process_start_of_frame_baseline_DCT(InputBitStream& image_content_)
 {
 	byte size_1, size_2;
 	image_content_ >> size_1 >> size_2;
@@ -108,12 +131,12 @@ void Jpeg::process_start_of_frame_simple(InputBitStream& image_content_)
 	}
 }
 
-void Jpeg::process_start_of_frame_extended(InputBitStream& image_content_)
+void Jpeg::process_start_of_frame_extended_sequential_DCT(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_start_of_frame_progressive(InputBitStream& image_content_)
+void Jpeg::process_start_of_frame_progressive_DCT(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
@@ -186,6 +209,11 @@ void Jpeg::process_quantization_table(InputBitStream& image_content_)
 			_quantization_tables[table_id][next_index.first][next_index.second] += second_byte_of_value;
 		}
 	}
+}
+
+void Jpeg::process_arithmetic_table(InputBitStream & image_content_)
+{
+	throw std::exception("Not implemented yet");
 }
 
 void Jpeg::process_restart_interval(InputBitStream& image_content_)
@@ -345,13 +373,14 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 
 }
 
-void Jpeg::process_restart(InputBitStream& image_content_)
+void Jpeg::process_restart_interval(InputBitStream& image_content_)
 {
 	throw std::exception("Not implemented yet");
 }
 
 void Jpeg::process_application_specific(InputBitStream& image_content_)
 {
+	throw std::exception("Not implemented yet");
 }
 
 void Jpeg::process_comment(InputBitStream& image_content_)
@@ -366,6 +395,11 @@ void Jpeg::process_comment(InputBitStream& image_content_)
 		image_content_ >> temp;
 		_comment += temp;
 	}
+}
+
+void Jpeg::process_number_of_lines(InputBitStream & image_content_)
+{
+	throw std::exception("Not implemented yet");
 }
 
 void Jpeg::calculating_zigzag_order_traversal(int size_of_table_, int size_of_matrix_)
@@ -391,38 +425,6 @@ void Jpeg::calculating_zigzag_order_traversal(int size_of_table_, int size_of_ma
 			}
 		}
 	}
-}
-
-
-Jpeg::HuffmanTree::HuffmanTreeIterator::HuffmanTreeIterator(HuffmanTree * tree_)
-	: _state(tree_->GetRoot())
-	, _root(tree_->GetRoot())
-{
-}
-
-Jpeg::HuffmanTree::HuffmanTreeIterator * Jpeg::HuffmanTree::HuffmanTreeIterator::Step(int way_)
-{
-	_state = (way_ == 0 ? _state->_left : _state->_right);
-	if (_state == nullptr)
-	{
-		throw std::exception("Something goes wrong");
-	}
-	return this;
-}
-
-bool Jpeg::HuffmanTree::HuffmanTreeIterator::IsCodeEnd()
-{
-	return _state->_code_end;
-}
-
-byte Jpeg::HuffmanTree::HuffmanTreeIterator::GetValue()
-{
-	return _state->_value;
-}
-
-void Jpeg::HuffmanTree::HuffmanTreeIterator::Reset()
-{
-	_state = _root;
 }
 
 
