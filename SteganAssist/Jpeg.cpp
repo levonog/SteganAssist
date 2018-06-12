@@ -216,11 +216,6 @@ void Jpeg::process_arithmetic_table(InputBitStream & image_content_)
 	throw std::exception("Not implemented yet");
 }
 
-void Jpeg::process_restart_interval(InputBitStream& image_content_)
-{
-	throw std::exception("Not implemented yet");
-}
-
 void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 {
 	byte size_1, size_2;
@@ -243,9 +238,9 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 		image_content_ >> components[i].id_for_DC_and_AC_coefs;
 	}
 
-	// TODO: I don't know what exactly means these 3 bytes
-	byte unknown[3];
-	image_content_ >> unknown[0] >> unknown[1] >> unknown[2];
+	byte Ss, Se, A;
+	image_content_ >> Ss >> Se >> A;
+	byte Ah = A >> 4, Al = A & 0xFF;
 
 	std::vector<std::vector<std::vector<int>>> resulting_matrices;
 	int number_of_matrices = 6;
