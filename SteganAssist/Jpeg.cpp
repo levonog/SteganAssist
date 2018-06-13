@@ -244,13 +244,35 @@ void Jpeg::process_start_of_scan(InputBitStream& image_content_)
 
 	std::vector<std::vector<std::vector<int>>> resulting_matrices;
 	int number_of_matrices = 6;
+	bool skip_zero = false;
 	while (number_of_matrices--)
 	{
+		if (skip_zero)
+		{
+			byte zeros[2];
+			image_content_ >> zeros[0] >> zeros[1];
+			if (zeros[0] == 0 && zeros[1] == 0)
+			{
+				skip_zero = false;
+				continue;
+			}
+			else
+			{
+				image_content_.BytesBack(2);
+			}
+		}
 		byte end_byte[2];
 		image_content_ >> end_byte[0] >> end_byte[1];
-		if (end_byte[0] == 0xFF && end_byte[1] == markers::EOI)
+		if (end_byte[0] == 0xFF)
 		{
-			break;
+			if (end_byte[1] == markers::EOI)
+			{
+				break;
+			}
+			else if (end_byte[1] == 0)
+			{
+				skip_zero = true;
+			}
 		}
 		image_content_.BytesBack(2);
 		for (int matrix_number = 0; matrix_number < 6; matrix_number++)
